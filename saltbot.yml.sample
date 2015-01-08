@@ -1,0 +1,62 @@
+# Web server configuration
+# Can be either a UNIX socket:
+#   specify 'socket' and optionally 'mode' (defaults to 777)
+# Or a host/port combination
+web:
+  socket: /tmp/saltbot-app.sock
+  mode: 777
+  host:
+  port:
+
+# Database configuration
+# In theory supports PostgreSQL, MySQL and SQLite via Peewee.
+# However at the time of writing there is no database.
+database:
+  engine: sqlite
+  file: saltbot.sqlite
+
+# IRC configuration
+# Specify server and port (no SSL), a channel to join and a nickname to use.
+irc:
+  server: chat.freenode.net
+  port: 6667
+  channel: "#saltbot"
+  nick: saltbot
+
+# GitHub configuration.
+# Enter the same secret here as on the webhook configuration to validate the
+# webhook HMAC signatures.
+github:
+  secret: hunter2
+
+# Log configuration.
+# Right now everything just gets written to stdout. Hopefully have something
+# more like options for this later.
+logs:
+
+# Repository configuration.
+# 
+# For each top level hash, the key specifies the full name of a GitHub repo.
+# For example, "adamgreig/saltbot".
+# 
+# Inside that repository's configuration, each key specifies a branch of that
+# repository, for example "master".
+# 
+# For each branch, specify a target, which may be a string or a list of
+# strings, and an expr_form, which is one of:
+# glob, pcre, list, grain, grain_pcre, pillar, nodegroup, range, or compound
+#
+# When a push comes in to a branch on a repository configured here, saltbot
+# runs state.highstate on the given target with expr_form set as configured.
+repos:
+  "adamgreig/saltbot":
+    master:
+      target:
+        - adam0
+        - adam1
+      expr_form: list
+    branch2:
+      target: "adam[0-9]"
+      expr_form: pcre
+    branch3:
+      target: adam*

@@ -1,0 +1,6 @@
+__pycache__/
+venv/
+build/
+*.egg-info
+.coverage
+saltbot.yml

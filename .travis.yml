@@ -1,0 +1,14 @@
+language: python
+
+python:
+  - "3.4"
+
+install:
+  - "pip install coveralls"
+  - "pip install -r requirements.txt"
+  - "pip install -r tests/requirements.txt"
+
+script: "nosetests --with-coverage --cover-package=saltbot"
+
+after_success:
+  - "coveralls"
