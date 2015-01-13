@@ -1,17 +1,17 @@
 # Web server configuration
-# Can be either a UNIX socket:
-#   specify 'socket' and optionally 'mode' (defaults to 777)
-# Or a host/port combination
+# Can be either a UNIX socket, specify 'socket' and 'mode'
+# Or a network socket, specify 'host' and 'port'
 web:
   url: http://saltbot.example.com/
   socket: /tmp/saltbot-app.sock
   mode: 777
-  host:
-  port:
 
 # Database configuration
-# In theory supports PostgreSQL, MySQL and SQLite via Peewee.
-# However at the time of writing there is no database.
+# SQLite:
+#   Set 'engine' to 'sqlite' and 'file' to the path to the SQLite database
+# PostgreSQL:
+#   Set 'engine' to 'postgresql' and specify 'database' plus optionally
+#   'host', 'port', 'username', 'password' if required
 database:
   engine: sqlite
   file: saltbot.sqlite
@@ -38,9 +38,18 @@ github:
   secret: hunter2
 
 # Log configuration.
-# Right now everything just gets written to stdout. Hopefully have something
-# more like options for this later.
 logs:
+  levels:
+    stderr: "INFO"
+    file: "NONE"
+    email: "NONE"
+  file: saltbot.log
+  email:
+    to:
+      - saltbot@example.com
+    from: saltbot@example.com
+    server: localhost
+
 
 # Repository configuration.
 # 

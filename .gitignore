@@ -5,4 +5,5 @@ dist/
 *.egg-info
 .coverage
 saltbot.yml
+saltbot.log
 *.sqlite

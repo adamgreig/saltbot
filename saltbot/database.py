@@ -4,7 +4,7 @@
 
 import logging
 
-from peewee import Proxy, SqliteDatabase
+from peewee import Proxy, SqliteDatabase, PostgresqlDatabase
 from peewee import Model, CharField, TextField, DateTimeField, ForeignKeyField
 from peewee import BooleanField
 
@@ -67,6 +67,12 @@ class Database:
         if dbcfg['engine'] == "sqlite":
             filename = dbcfg['file']
             self.db = SqliteDatabase(filename)
+        elif dbcfg['engine'] == "postgresql":
+            args = dict(dbcfg)
+            del args['engine']
+            database = args['database']
+            del args['database']
+            self.db = PostgresqlDatabase(database, **args)
         else:
             raise ValueError("No supported database engine found in config")
         DBProxy.initialize(self.db)

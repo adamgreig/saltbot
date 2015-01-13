@@ -14,23 +14,19 @@ import logging
 import multiprocessing
 from queue import Empty
 
+from . import config
 from . import webapp
 from . import ircbot
 from . import exchange
 from . import saltshaker
-from . import database
 
-modules = ("webapp", "ircbot", "exchange", "saltshaker")
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="[%(asctime)s] %(levelname)s %(name)s: %(message)s")
+modules = ("config", "webapp", "ircbot", "exchange", "saltshaker")
 logger = logging.getLogger("saltbot")
 
 
 class SaltBot:
     def __init__(self):
-        self.cfg = self.load_config()
+        self.cfg = config.ConfigParser().load()
         self.commands = {
             "quit": self.command_quit,
             "say": self.command_say,
@@ -154,7 +150,9 @@ class SaltBot:
             self.irc_send(who, "Reloading {}".format(arg))
             logger.info("Reloading {}".format(arg))
             imp.reload(globals()[arg])
-            if arg == "webapp":
+            if arg == "config":
+                self.cfg = config.ConfigParser().load()
+            elif arg == "webapp":
                 self.webp.terminate()
                 self.webp.join()
                 self.start_web()
@@ -208,6 +206,7 @@ def createtables():
     Creates DB tables
     Entry point: saltbot-createtables
     """
+    from . import database
     saltbot = SaltBot()
     db = database.Database(saltbot.cfg)
     db.create_tables()
@@ -218,6 +217,7 @@ def droptables():
     Drops DB tables
     Entry point: saltbot-droptables
     """
+    from . import database
     saltbot = SaltBot()
     db = database.Database(saltbot.cfg)
     confirm = input("Confirm DROP all tables? (y)> ")
