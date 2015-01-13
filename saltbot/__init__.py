@@ -9,8 +9,10 @@ __license__ = "MIT License"
 
 import sys
 import imp
+import time
 import logging
 import multiprocessing
+from queue import Empty
 
 import yaml
 
@@ -18,6 +20,7 @@ from . import webapp
 from . import ircbot
 from . import exchange
 from . import saltshaker
+from . import database
 
 modules = ("webapp", "ircbot", "exchange", "saltshaker")
 
@@ -30,11 +33,11 @@ logger = logging.getLogger("saltbot")
 class SaltBot:
     def __init__(self):
         self.cfg = self.load_config()
-        self.console_commands = {
-            "quit": self.console_quit,
-            "say": self.console_say,
-            "reload": self.console_reload,
-            "help": self.console_help,
+        self.commands = {
+            "quit": self.command_quit,
+            "say": self.command_say,
+            "reload": self.command_reload,
+            "help": self.command_help,
         }
 
     def load_config(self):
@@ -48,104 +51,185 @@ class SaltBot:
     def run(self):
         logger.info("Saltbot starting up")
 
-        self.ircq = multiprocessing.Queue()
-        self.ircp = multiprocessing.Process(
-            target=ircbot.run, args=(self.cfg, self.ircq))
+        # IRC Message Queue, *->IRC
+        self.ircmq = multiprocessing.Queue()
+        # IRC Command Queue, IRC->core
+        self.irccq = multiprocessing.Queue()
+        # Web Push Queue, web->exchange
+        self.webpq = multiprocessing.Queue()
+        # Salt Command Queue, exchange->salt
+        self.sltcq = multiprocessing.Queue()
+        # Salt Result Queue, salt->exchange
+        self.sltrq = multiprocessing.Queue()
 
-        self.webq = multiprocessing.Queue()
-        self.webp = multiprocessing.Process(
-            target=webapp.run, args=(self.cfg, self.webq))
+        self.start_exc()
+        self.start_irc()
+        self.start_slt()
+        self.start_web()
 
-        self.sltq = multiprocessing.Queue()
-        self.sltp = multiprocessing.Process(
-            target=saltshaker.run, args=(self.cfg, self.sltq))
+        self.loop()
 
+    def start_exc(self):
+        logger.info("Starting Exchange process")
         self.excp = multiprocessing.Process(
-            target=exchange.run,
-            args=(self.cfg, self.webq, self.ircq, self.sltq))
-
-        self.processes = self.ircp, self.webp, self.sltp, self.excp
-
+            target=exchange.run, name="Saltbot Exchange",
+            args=(self.cfg, self.ircmq, self.webpq, self.sltcq, self.sltrq))
         self.excp.start()
+
+    def start_irc(self):
+        logger.info("Starting IRC process")
+        self.ircp = multiprocessing.Process(
+            target=ircbot.run, name="Saltbot IRC",
+            args=(self.cfg, self.ircmq, self.irccq))
         self.ircp.start()
+
+    def start_slt(self):
+        logger.info("Starting Salt process")
+        self.sltp = multiprocessing.Process(
+            target=saltshaker.run, name="Saltbot Salt",
+            args=(self.cfg, self.sltcq, self.sltrq))
         self.sltp.start()
+
+    def start_web(self):
+        logger.info("Starting web process")
+        self.webp = multiprocessing.Process(
+            target=webapp.run, name="Saltbot Web",
+            args=(self.cfg, self.webpq))
         self.webp.start()
 
-        self.console()
-
-    def console(self):
-        self.console_help(None)
+    def loop(self):
+        """
+        Check all child processes are still alive and restart if required.
+        Handle incoming commands from IRC.
+        """
         while True:
-            cmd = input("> ")
-            arg = None
-            if " " in cmd:
-                cmd, arg = cmd.split(" ")
-                arg = arg.strip()
+            # Restart dead child processes
+            if not self.ircp.is_alive():
+                logger.warn("IRC process died, restarting")
+                self.start_irc()
+            if not self.webp.is_alive():
+                logger.warn("Web process died, restarting")
+                self.start_web()
+            if not self.sltp.is_alive():
+                logger.warn("Salt process died, restarting")
+                self.start_slt()
+            if not self.excp.is_alive():
+                logger.warn("Exchange process died, restarting")
+                self.start_exc()
 
-            if cmd in self.console_commands:
-                self.console_commands[cmd](arg)
+            # Handle commands from IRC
+            try:
+                cmd, args = self.irccq.get_nowait()
+            except Empty:
+                pass
             else:
-                print("Unknown command")
+                if cmd == "cmd":
+                    self.process_irc_command(*args)
 
-            if cmd == "quit":
-                return
+            time.sleep(1)
 
-    def console_help(self, arg):
-        print("saltbot command console")
-        print("commands:")
-        print("  quit               Closes saltbot")
-        print("  help               Display this message")
-        print("  say <message>      Says <message> on IRC")
-        print("  reload <module>    Reloads <module>, one of:")
-        print("    ", ", ".join(modules))
+    def process_irc_command(self, who, message):
+        logger.info("Processing IRC command <{}> {}".format(who, message))
+        if " " in message:
+            cmd, arg = message.split(maxsplit=1)
+            arg = arg.strip()
+        else:
+            cmd = message.strip()
+            arg = None
 
-    def console_reload(self, arg):
+        if cmd in self.commands:
+            logger.info("Executing command {}".format(cmd))
+            self.commands[cmd](who, arg)
+        else:
+            logger.info("Unknown command {}".format(cmd))
+            self.irc_send(who, "Unknown command")
+
+    def irc_send(self, who, msg):
+        self.ircmq.put(("privmsg", (who, msg)))
+
+    def command_help(self, who, arg):
+        self.irc_send(who, "Available commands:")
+        self.irc_send(who, "  quit               Closes saltbot")
+        self.irc_send(who, "  help               Display this message")
+        self.irc_send(who, "  say <message>      Says <message> on IRC")
+        self.irc_send(who, "  reload <module>    Reloads <module>, one of:")
+        self.irc_send(who, "    {}".format(", ".join(modules)))
+
+    def command_reload(self, who, arg):
         if not arg or arg not in modules:
-            print("Must specify a module, one of:")
-            print(modules)
+            self.irc_send(who, "Must specify a module, one of:")
+            self.irc_send(who, ', '.join(modules))
             return
         else:
-            print("Reloading {}".format(arg))
+            self.irc_send(who, "Reloading {}".format(arg))
+            logger.info("Reloading {}".format(arg))
             imp.reload(globals()[arg])
             if arg == "webapp":
                 self.webp.terminate()
                 self.webp.join()
-                self.webp = multiprocessing.Process(
-                    target=webapp.run, args=(self.cfg, self.webq))
-                self.webp.start()
+                self.start_web()
             elif arg == "ircbot":
                 self.ircp.terminate()
                 self.ircp.join()
-                self.ircp = multiprocessing.Process(
-                    target=ircbot.run, args=(self.cfg, self.ircq))
-                self.ircp.start()
+                self.start_irc()
             elif arg == "saltshaker":
                 self.sltp.terminate()
                 self.sltp.join()
-                self.sltp = multiprocessing.Process(
-                    target=saltshaker.run, args=(self.cfg, self.sltq))
-                self.sltp.start()
+                self.start_slt()
             elif arg == "exchange":
                 self.excp.terminate()
                 self.excp.join()
-                self.excp = multiprocessing.Process(
-                    target=exchange.run,
-                    args=(self.cfg, self.webq, self.ircq, self.sltq))
-                self.excp.start()
+                self.start_exc()
 
-    def console_quit(self, arg):
-        print("Shutting down.")
-        [p.terminate() for p in self.processes]
-        [p.join() for p in self.processes]
+    def command_quit(self, who, arg):
+        self.irc_send(who, "Shutting down.")
+        logger.warn("Quitting due to command")
 
-    def console_say(self, arg):
-        if not arg:
-            print("Must specify a message")
+        self.excp.terminate()
+        self.sltp.terminate()
+        self.ircp.terminate()
+        self.webp.terminate()
+
+        self.excp.join()
+        self.sltp.join()
+        self.ircp.join()
+        self.webp.join()
+
+        sys.exit()
+
+    def command_say(self, who, arg):
+        if arg:
+            self.ircmq.put(("pubmsg", arg))
         else:
-            print("Saying {}".format(arg))
-            self.ircq.put(arg)
+            self.irc_send(who, "Must specify a message")
 
 
 def main():
+    """
+    Runs Saltbot
+    Entry point: saltbot
+    """
     saltbot = SaltBot()
     saltbot.run()
+
+
+def createtables():
+    """
+    Creates DB tables
+    Entry point: saltbot-createtables
+    """
+    saltbot = SaltBot()
+    db = database.Database(saltbot.cfg)
+    db.create_tables()
+
+
+def droptables():
+    """
+    Drops DB tables
+    Entry point: saltbot-droptables
+    """
+    saltbot = SaltBot()
+    db = database.Database(saltbot.cfg)
+    confirm = input("Confirm DROP all tables? (y)> ")
+    if confirm == "y":
+        db.drop_tables()

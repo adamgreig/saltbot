@@ -14,13 +14,19 @@ def get_version():
                 return line[15:-2]
     raise Exception("Could not find version number")
 
+console_scripts = [
+    "saltbot = saltbot:main",
+    "saltbot-createtables = saltbot:createtables",
+    "saltbot-droptables = saltbot:droptables"
+]
+
 setup(
     name="Saltbot",
     version=get_version(),
     author="Adam Greig",
     author_email="adam@adamgreig.com",
     packages=["saltbot"],
-    entry_points={"console_scripts": ["saltbot = saltbot:main"]},
+    entry_points={"console_scripts": console_scripts},
     url="http://github.com/adamgreig/saltbot",
     license="MIT",
     description="IRC bot for Salt deployments",
@@ -28,7 +34,7 @@ setup(
     test_suite="nose.collector",
     tests_require=["nose", "mock"],
     install_requires=[
-        "Flask", "irc", "PyYAML"
+        "Flask", "irc", "PyYAML", "tornado", "peewee"
     ],
     classifiers=[
         "Development Status :: 3 - Alpha",

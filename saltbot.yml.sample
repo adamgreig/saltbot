@@ -3,6 +3,7 @@
 #   specify 'socket' and optionally 'mode' (defaults to 777)
 # Or a host/port combination
 web:
+  url: http://saltbot.example.com/
   socket: /tmp/saltbot-app.sock
   mode: 777
   host:
@@ -17,11 +18,18 @@ database:
 
 # IRC configuration
 # Specify server and port (no SSL), a channel to join and a nickname to use.
+# The 'password' setting is optional and will be used to identify to NickServ.
+# The 'owners' setting dictates who may send commands to the bot via IRC.
+# Users are checked for identification by "PRIVMSG NickServ ACC <username>"
+# and expecting a response like "<username> ACC 3", which works on Freenode.
 irc:
   server: chat.freenode.net
   port: 6667
   channel: "#saltbot"
+  password: hunter2
   nick: saltbot
+  owners:
+    - adamgreig
 
 # GitHub configuration.
 # Enter the same secret here as on the webhook configuration to validate the

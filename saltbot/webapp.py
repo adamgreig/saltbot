@@ -5,25 +5,75 @@
 import hmac
 import logging
 
-from flask import Flask, request
+from flask import Flask, request, g, jsonify
 from tornado.wsgi import WSGIContainer
 from tornado.httpserver import HTTPServer
 from tornado.ioloop import IOLoop
 from tornado.netutil import bind_unix_socket
 
+try:
+    reloading
+except NameError:
+    reloading = False
+else:
+    import imp
+    from . import database
+    imp.reload(database)
+
+from .database import Database
+from .database import GitHubPush, SaltJob, SaltJobMinion, SaltMinionResult
+
 app = Flask(__name__)
 logger = logging.getLogger("saltbot.http")
+database = None
 
 
-@app.before_first_request
-def startup():
-    pass
+@app.before_request
+def before_request():
+    g._db = Database(app.config)
+    g._db.connect()
+
+
+@app.teardown_appcontext
+def teardown_appcontext(error=None):
+    if hasattr(g, '_db'):
+        g._db.close()
 
 
 @app.route("/")
 def index():
     logger.info("index()")
     return "Hello World!"
+
+
+@app.route("/pushes/")
+def pushes():
+    pushesq = GitHubPush.select()
+    page = int(request.args.get('page', 1))
+    pages = pushesq.count() // 20 + 1
+    pushes = [p.to_dict() for p in pushesq.paginate(page, 20).iterator()]
+    return jsonify(page=page, pages=pages, pushes=pushes)
+
+
+@app.route("/pushes/<int:pushid>")
+def push(pushid):
+    push = GitHubPush.get(id=pushid)
+    return jsonify(**push.to_dict())
+
+
+@app.route("/jobs/")
+def jobs():
+    jobsq = SaltJob.select()
+    page = int(request.args.get('page', 1))
+    pages = jobsq.count() // 20 + 1
+    jobs = [j.to_dict() for j in jobsq.paginate(page, 20).iterator()]
+    return jsonify(page=page, pages=pages, jobs=jobs)
+
+
+@app.route("/jobs/<int:jobid>")
+def job(jobid):
+    job = SaltJob.get(id=jobid)
+    return jsonify(**job.to_dict())
 
 
 @app.route("/webhook", methods=["POST"])
@@ -40,7 +90,7 @@ def webhook():
 
     if request.headers.get('X-GitHub-Event') == 'push':
         event = request.get_json()
-        push = {"__type": "webhook_push"}
+        push = {}
         push['gitref'] = event['ref']
         push['repo_name'] = event['repository']['full_name']
         push['repo_url'] = event['repository']['url']
@@ -51,7 +101,7 @@ def webhook():
         push['commit_author'] = event['head_commit']['author']['username']
         push['pusher'] = event['pusher']['name']
         logger.info("Details: {}".format(push))
-        app.config['webq'].put(push)
+        app.config['webpq'].put(("github_push", push))
 
     if request.headers.get('X-GitHub-Event') == 'ping':
         logger.info("Received GitHub ping")
@@ -59,10 +109,10 @@ def webhook():
     return "OK"
 
 
-def run(config, webq):
+def run(config, webpq):
     logger.info("App starting up")
     app.config.update(config)
-    app.config['webq'] = webq
+    app.config['webpq'] = webpq
     server = HTTPServer(WSGIContainer(app))
     if config['web'].get('socket'):
         mode = int(str(config['web'].get('mode', 777)), 8)
@@ -81,5 +131,5 @@ if __name__ == "__main__":
         format="[%(asctime)s] %(levelname)s %(name)s: %(message)s")
     config = {"web": {"socket": "/tmp/saltbot-app.sock", "mode": 777}}
     import multiprocessing
-    webq = multiprocessing.Queue()
-    run(config, webq)
+    webpq = multiprocessing.Queue()
+    run(config, webpq)

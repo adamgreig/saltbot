@@ -2,3 +2,4 @@ Flask==0.10.1
 irc==11.0.1
 PyYAML==3.11
 tornado==4.0.2
+peewee==2.4.5
