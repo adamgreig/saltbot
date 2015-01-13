@@ -14,8 +14,6 @@ import logging
 import multiprocessing
 from queue import Empty
 
-import yaml
-
 from . import webapp
 from . import ircbot
 from . import exchange
@@ -39,14 +37,6 @@ class SaltBot:
             "reload": self.command_reload,
             "help": self.command_help,
         }
-
-    def load_config(self):
-        logger.info("Loading config")
-        if len(sys.argv) == 1:
-            cfile = "saltbot.yml"
-        else:
-            cfile = sys.argv[1]
-        return yaml.load(open(cfile).read())
 
     def run(self):
         logger.info("Saltbot starting up")
