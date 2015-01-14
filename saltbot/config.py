@@ -50,6 +50,15 @@ class ConfigParser:
         web = self.cfg['web']
         if 'url' not in web:
             raise ValueError("Must specify web.url in config")
+        if web['url'][-1] == "/":
+            self.cfg['web']['url'] = web['url'][:-1]
+        if 'per_page' not in web:
+            self.cfg['web']['per_page'] = 20
+        try:
+            self.cfg['web']['per_page'] = int(web['per_page'])
+        except ValueError:
+            raise ValueError("web.per_page must be an integer")
+
         if not (
                 ('socket' in web and 'mode' in web) or
                 ('host' in web and 'port' in web)):

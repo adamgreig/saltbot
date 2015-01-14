@@ -13,9 +13,6 @@ logger = logging.getLogger("saltbot.database")
 
 
 class BaseModel(Model):
-    def to_dict(self):
-        return {k: str(getattr(self, k)) for k in self._meta.get_field_names()}
-
     class Meta:
         database = DBProxy
 
@@ -35,7 +32,7 @@ class GitHubPush(BaseModel):
 
 class SaltJob(BaseModel):
     when = DateTimeField()
-    jid = CharField()
+    jid = CharField(unique=True)
     expr_form = CharField()
     target = TextField()
     github_push = ForeignKeyField(GitHubPush, related_name='jobs', null=True)
@@ -53,7 +50,7 @@ class SaltMinionResult(BaseModel):
     key_name = CharField(null=True)
     key_func = CharField(null=True)
     comment = TextField(null=True)
-    result = BooleanField(null=True)
+    result = BooleanField()
     output = TextField()
 
 

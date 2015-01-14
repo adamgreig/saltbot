@@ -52,29 +52,55 @@ class SaltShaker:
                 if cmd == "highstate":
                     self.highstate(*arg)
 
-    def highstate(self, target, expr, gh_push_id):
-        job = salt_client.run_job(target, 'state.highstate', expr_form=expr)
+    def start_salt(self, tgt, expr):
+        job = salt_client.run_job(tgt, 'state.highstate', expr_form=expr)
         jid, minions = job['jid'], job['minions']
         iter_returns = salt_client.get_iter_returns(
-            jid, minions, tgt=target, tgt_type=expr)
+            jid, minions, tgt=tgt, tgt_type=expr)
+        return jid, minions, iter_returns
+
+    def create_records(self, tgt, expr, jid, minions, push_id):
         now = datetime.datetime.now()
-        dbjob = SaltJob(target=target, expr_form=expr, jid=jid,
-                        when=now, github_push=gh_push_id)
+        dbjob = SaltJob(target=tgt, expr_form=expr, jid=jid,
+                        when=now, github_push=push_id)
         dbjob.save()
         dbminions = []
         for minion in minions:
             dbminion = SaltJobMinion(job=dbjob, minion=minion)
             dbminion.save()
             dbminions.append(dbminion)
+        return dbjob, dbminions
+
+    def store_state_result(self, dbminion, key, val):
+        out_j = json.dumps(val)
+        dbresult = SaltMinionResult(minion=dbminion, output=out_j)
+
+        # Get key based data
+        try:
+            k_state, k_id, k_name, k_func = key.split("_|-")
+            dbresult.key_state = k_state
+            dbresult.key_id = k_id
+            dbresult.key_name = k_name
+            dbresult.key_func = k_func
+        except ValueError:
+            pass
+
+        # Get some other data fields that we care to store
+        try:
+            dbresult.result = bool(val['result'])
+            dbresult.comment = str(val['comment'])
+        except KeyError:
+            dbresult.result = False
+        dbresult.save()
+
+    def highstate(self, target, expr, gh_push_id):
+        jid, minions, iter_returns = self.start_salt(target, expr)
+        dbjob, dbminions = self.create_records(
+            target, expr, jid, minions, gh_push_id)
 
         logger.info("Started Salt {} to highstate {}, DB ID {}"
                     .format(jid, minions, dbjob.id))
-        self.sltrq.put(
-            ("salt_started", "Salt JID {} running to highstate {}"
-                             .format(jid, ', '.join(minions))))
-        self.sltrq.put(
-            ("salt_started", "{}jobs/{}"
-                             .format(self.cfg['web']['url'], dbjob.id)))
+        self.sltrq.put(("salt_started", (jid, minions)))
 
         all_ok = True
         minions_heard_from = 0
@@ -85,39 +111,17 @@ class SaltShaker:
                 dbminion = dbminions[minions.index(minion)]
                 if 'ret' not in result:
                     continue
-                minions_heard_from += 1
                 logger.info("Processing Salt results for {}".format(minion))
+                minions_heard_from += 1
                 for key, val in result['ret'].items():
-                    out_j = json.dumps(val)
-                    dbresult = SaltMinionResult(minion=dbminion, output=out_j)
-                    try:
-                        k_state, k_id, k_name, k_func = key.split("_|-")
-                        dbresult.key_state = k_state
-                        dbresult.key_id = k_id
-                        dbresult.key_name = k_name
-                        dbresult.key_func = k_func
-                    except ValueError:
-                        pass
-                    try:
-                        dbresult.result = bool(val['result'])
-                        dbresult.comment = str(val['comment'])
-                    except KeyError:
-                        pass
-                    else:
-                        if not dbresult.result:
-                            all_ok = False
-                    dbresult.save()
-        if all_ok and minions_heard_from == len(minions):
-            logger.info("Salt results for {} in, all OK".format(jid))
-            self.sltrq.put(("salt_result", "Salt JID {} finished, all OK"
-                                           .format(jid)))
-        else:
-            logger.info("Salt results for {} in, not OK".format(jid))
-            self.sltrq.put(("salt_result", "Salt JID {} finished with errors"
-                                           .format(jid)))
-        self.sltrq.put(
-            ("salt_started", "{}jobs/{}"
-                             .format(self.cfg['web']['url'], dbjob.id)))
+                    self.store_state_result(dbminion, key, val)
+                    if 'result' in val and not val['result']:
+                        all_ok = False
+
+        m, n = minions_heard_from, len(minions)
+        logger.info("Results for {}: {}/{} results, all_ok={}"
+                    .format(jid, m, n, all_ok))
+        self.sltrq.put(("salt_result", (jid, all_ok, m, n)))
 
 
 def run(config, sltcq, sltrq):

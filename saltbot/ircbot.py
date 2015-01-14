@@ -114,16 +114,3 @@ class IRCBot(irc.bot.SingleServerIRCBot):
 def run(config, ircmq, irccq):
     bot = IRCBot(config, ircmq, irccq)
     bot.start()
-
-if __name__ == "__main__":
-    logging.basicConfig(
-        level=logging.INFO,
-        format="[%(asctime)s] %(levelname)s %(name)s: %(message)s")
-    config = {"irc": {"server": "chat.freenode.net",
-                      "channel": "#adamgreig",
-                      "nick": "saltbot",
-                      "port": 6667}}
-    import multiprocessing
-    ircmq = multiprocessing.Queue
-    irccq = multiprocessing.Queue
-    run(config, ircmq, irccq)

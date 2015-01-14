@@ -78,12 +78,27 @@ class Exchange:
         else:
             logger.info("Push was not to a configured repository")
 
-    def handle_salt_started(self, message):
-        self.ircmq.put(("pubmsg", message))
+    def handle_salt_started(self, args):
+        jid, minions = args
+        self.ircmq.put(
+            ("pubmsg", "Salt {} started to highstate {}".format(jid, minions)))
+        self.ircmq.put(
+            ("pubmsg", "{}/jobs/{}".format(self.cfg['web']['url'], jid)))
 
-    def handle_salt_result(self, message):
-        self.ircmq.put(("pubmsg", message))
-        logger.info("Received salt result")
+    def handle_salt_result(self, args):
+        jid, all_ok, m, n = args
+        if all_ok and m == n:
+            self.ircmq.put(
+                ("pubmsg", "Salt JID {} finished, all OK".format(jid)))
+        elif not all_ok:
+            self.ircmq.put(
+                ("pubmsg", "Salt JID {} finished, some errors".format(jid)))
+        elif m != n:
+            self.ircmq.put(
+                ("pubmsg", "Salt JID {} finished, only {}/{} results"
+                           .format(jid, m, n)))
+        self.ircmq.put(
+            ("pubmsg", "{}/jobs/{}".format(self.cfg['web']['url'], jid)))
 
 
 def run(config, ircmq, webpq, sltcq, sltrq):

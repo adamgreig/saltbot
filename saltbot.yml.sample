@@ -1,8 +1,11 @@
 # Web server configuration
 # Can be either a UNIX socket, specify 'socket' and 'mode'
 # Or a network socket, specify 'host' and 'port'
+# Specify the url the site may be accessed at with 'url'.
+# Optionally specify results per page for paginated results with 'per_page'
 web:
   url: http://saltbot.example.com/
+  per_page: 10
   socket: /tmp/saltbot-app.sock
   mode: 777
 
