@@ -1,0 +1,269 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <base href="/">
+    <title>Saltbot</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootswatch/3.3.1/darkly/bootstrap.min.css">
+    <style type="text/css">
+      .model-btn {
+          width: 400px;
+          margin: 0 10px 10px 10px;
+      }
+
+      .btn-title {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          font-weight: bold;
+          font-size: 1.2em;
+      }
+
+      .btn-body {
+          white-space: normal;
+      }
+    </style>
+  </head>
+
+  <body>
+    <nav class="navbar navbar-default navbar-static-top">
+      <div class="container">
+        <div class="navbar-header">
+          <a class="navbar-brand" href="/">Saltbot</a>
+        </div>
+      </div>
+    </nav>
+
+    <div ng-view>
+    </div>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/js/bootstrap.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.3.9/angular.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.3.9/angular-resource.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.3.9/angular-route.js"></script>
+    <script src="http://cdnjs.cloudflare.com/ajax/libs/coffee-script/1.7.1/coffee-script.min.js"></script>
+    <script type="text/coffeescript">
+      App = angular.module 'saltbot', ['ngResource', 'ngRoute']
+
+      .config ($resourceProvider, $routeProvider, $locationProvider) ->
+          $resourceProvider.defaults.stripTrailingSlashes = false
+          $routeProvider
+          .when '/',
+              controller: 'JobsCtrl'
+              templateUrl: 'jobs.html'
+          .when '/pushes/:id',
+              controller: 'PushCtrl'
+              templateUrl: 'push.html'
+          .when '/jobs/:jid',
+              controller: 'JobCtrl'
+              templateUrl: 'job.html'
+          .when '/jobs/:jid/minions/:id',
+              controller: 'MinionCtrl'
+              templateUrl: 'minion.html'
+          $locationProvider.html5Mode true
+
+      .factory 'Push', ($resource) ->
+          $resource '/api/pushes/:id'
+
+      .factory 'Job', ($resource) ->
+          $resource '/api/jobs/:jid', {},
+              query:
+                  method: 'GET'
+                  isArray: true
+                  transformResponse: (data) ->
+                      JSON.parse(data).jobs
+
+      .factory 'Minion', ($resource) ->
+          $resource '/api/jobs/:jid/minions/:id'
+
+      .controller 'JobsCtrl', ($scope, $routeParams, Job) ->
+          Job.query().$promise.then (jobs) ->
+              $scope.jobs = for job in jobs
+                  if job.all_in and job.no_errors
+                      job.indicator = 'success'
+                      job.status = 'All minions completed successfully'
+                  else if job.all_in and not job.no_errors
+                      job.indicator = 'danger'
+                      job.status = 'Errors encountered'
+                  else
+                      job.indicator = 'warning'
+                      job.status = 'Waiting for results'
+                  job
+
+      .controller 'PushCtrl', ($scope, $routeParams, Push) ->
+        $scope.push = Push.get(id: $routeParams.id)
+
+      .controller 'JobCtrl', ($scope, $routeParams, Job) ->
+        $scope.job = Job.get(jid: $routeParams.jid)
+        $scope.job.$promise.then (job) ->
+          $scope.job.minions = for minion in job.minions
+            if minion.num_results > 0 and minion.no_errors
+              minion.indicator = 'success'
+              minion.state = "#{ minion.num_good } states successful"
+            else if not minion.no_errors
+              minion.indicator = 'danger'
+              minion.state = "#{ minion.num_good } states successful, #{ minion.num_errors } in error"
+            else
+              minion.indicator = 'warning'
+              minion.state = "Waiting for results"
+              minion.disabled = true
+            minion
+
+      .controller 'MinionCtrl', ($scope, $routeParams, Minion) ->
+        $scope.minion = Minion.get(jid: $routeParams.jid, id: $routeParams.id)
+        $scope.minion.$promise.then (minion) ->
+          $scope.minion.results = for result in minion.results
+            if result.result
+              result.indicator = 'success'
+            else
+              result.indicator = 'danger'
+            result.output_pretty = JSON.stringify(result.output, undefined, 2)
+            result
+
+      angular.bootstrap document, ['saltbot']
+    </script>
+
+    <script type="text/ng-template" id="jobs.html">
+      <div class=container>
+        <ol class=breadcrumb>
+          <li class=active>Home</li>
+        </ol>
+      </div>
+
+      <div class=container>
+        <div ng-repeat="job in jobs">
+          <a href="/pushes/{{job.push.id}}" class="btn btn-info model-btn">
+            <div class=btn-title>{{job.push.commit_msg}}</div>
+            <div class=btn-body>
+              <em>by</em> {{job.push.commit_author}}
+              <em>at</em> {{job.push.commit_ts}}
+            </div>
+            <div class=btn-body>
+              <em>to</em> {{job.push.repo_name}} {{job.push.branch}}
+            </div>
+          </a>
+          <span class="glyphicon glyphicon-arrow-right"></span>
+          <a href="/jobs/{{job.jid}}" class="btn btn-{{job.indicator}} model-btn">
+            <div class=btn-title>Job {{job.jid}}</div>
+            <div class=btn-body>
+              <em>targeting</em> <code>{{job.target}}</code>
+            </div>
+            <div class=btn-body>{{job.status}}</div>
+          </a>
+        </div>
+      </div>
+    </script>
+
+    <script type="text/ng-template" id="job.html">
+      <div class="container">
+        <ol class="breadcrumb">
+          <li><a href="/">Home</a></li>
+          <li class="active">Job {{job.jid}}</li>
+        </ol>
+      </div>
+
+      <div class=container>
+        <div class="panel panel-default">
+          <div class=panel-body>
+            <p>
+              Job started at {{job.when}}, targetting ({{job.expr_form}})
+              <code>{{job.target}}</code>
+            </p>
+            <p>
+              Triggered by <a href="/pushes/{{job.push.id}}">
+              push {{job.push.id}}</a></p>
+          </div>
+        </div>
+      </div>
+
+      <div class=container>
+        <a
+           ng-repeat="minion in job.minions"
+           href="/jobs/{{job.jid}}/minions/{{minion.id}}"
+           class="btn btn-{{minion.indicator}} model-btn"
+           ng-disabled={{minion.disabled}}>
+          <div class=btn-title>{{minion.minion}}</div>
+          <div class=btn-body>{{minion.state}}</div>
+        </a>
+      </div>
+    </script>
+
+    <script type="text/ng-template" id="push.html">
+      <div class="container">
+        <ol class="breadcrumb">
+          <li><a href="/">Home</a></li>
+          <li class="active">Push {{push.id}}</li>
+        </ol>
+      </div>
+
+      <div class=container>
+        <div class="panel panel-default">
+          <div class=panel-heading>
+            Commit
+            <a href="{{push.commit_url}}">
+              {{push.commit_id}}
+            </a>
+          </div>
+          <div class=panel-body>
+            <blockquote>{{push.commit_msg}}</blockquote>
+            <a href="https://github.com/{{push.commit_author}}">
+              {{push.commit_author}}
+            </a> on {{push.commit_ts}}
+          </div>
+        </div>
+
+        <div class="panel panel-default">
+          <div class=panel-heading>Push</div>
+          <div class=panel-body>
+            <p>
+              Pushed to
+              <a href="{{push.repo_url}}">{{push.repo_name}}</a>
+              branch
+              <a href="{{push.repo_url}}/tree/{{push.branch}}">
+                {{push.branch}}
+              </a>
+              by
+              <a href="https://github.com/{{push.pusher}}">{{push.pusher}}</a>
+              on {{push.when}}
+            </p>
+            <p>Triggered <a href=/job/{{push.job_jid}}>Job {{push.job_jid}}</a></p>
+          </div>
+        </div>
+      </div>
+    </script>
+
+    <script type="text/ng-template" id="minion.html">
+      <div class="container">
+        <ol class="breadcrumb">
+          <li><a href="/">Home</a></li>
+          <li><a href="/jobs/{{minion.jid}}">Job {{minion.jid}}</a></li>
+          <li class="active">Minion {{minion.minion}}</li>
+        </ol>
+      </div>
+
+      <div class="container">
+        <div class=panel-group>
+
+          <div ng-repeat="result in minion.results"
+               class="panel panel-{{result.indicator}}">
+            <div class="panel-heading" data-toggle=collapse
+                 data-target="#collapse-{{$index}}">
+              {{result.key_id}}: {{result.key_state}}.{{result.key_func}}
+              {{result.key_name}}
+            </div>
+            <div class="panel-collapse collapse" id="collapse-{{$index}}">
+              <div class=panel-body>
+                <pre>{{result.output_pretty}}</pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </script>
+  </body>
+  
+</html>
