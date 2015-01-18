@@ -9,7 +9,7 @@ Sample post-receive hook which sends notifications to Saltbot.
 
 $ git config hook.webhookurl http://saltbot.sample.com/api/webhook
 $ git config hook.webhooksecret hunter2
-$ cp saltbot/post_receive.py .git/hooks/post_receive
+$ cp saltbot/post-receive.py .git/hooks/post-receive
 $ chmod +x .git/hooks/post_receive
 """
 
