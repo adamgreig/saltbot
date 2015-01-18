@@ -131,12 +131,13 @@ class SaltBot:
         self.terminate()
 
     def terminate(self):
-        for p in (self.excp, self.sltp, self.ircp, self.webp):
-            if p is not None:
-                p.terminate()
-        for p in (self.excp, self.sltp, self.ircp, self.webp):
-            if p is not None:
-                p.join()
+        children = "excp", "sltp", "ircp", "webp"
+        for child in children:
+            if hasattr(self, child) and getattr(self, child) is not None:
+                getattr(self, child).terminate()
+        for child in children:
+            if hasattr(self, child) and getattr(self, child) is not None:
+                getattr(self, child).join()
         sys.exit()
 
     def process_irc_command(self, who, message):
