@@ -1,10 +1,16 @@
 # Saltbot
 # Copyright 2015 Adam Greig
 # Released under the MIT license. See LICENSE file for details.
-
+import sys
 import json
 
 from .database import GitHubPush, SaltJob, SaltJobMinion, SaltMinionResult
+
+PY2 = sys.version_info[0] == 2
+if not PY2:
+    text_type = str
+else:
+    text_type = unicode
 
 
 def serialise(obj):
@@ -32,10 +38,15 @@ def serialise_fields(obj, skip=None):
         if isinstance(getattr(obj, k), type(None)):
             r[k] = None
             continue
-        for t in (str, int, bool):
+        for t in (text_type, int, bool):
             if isinstance(getattr(obj, k), t):
                 r[k] = t(getattr(obj, k))
                 continue
+            else:
+                try:
+                    r[k] = text_type(getattr(obj, k))
+                except TypeError:
+                    pass
     return r
 
 

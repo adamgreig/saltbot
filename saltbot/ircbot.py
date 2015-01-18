@@ -28,7 +28,8 @@ class IRCBot(irc.bot.SingleServerIRCBot):
         self.channel = config['irc']['channel']
         self.nick = config['irc']['nick']
         self.auth_check_in_flight = None
-        super().__init__([(self.server, self.port)], self.nick, self.nick)
+        super(IRCBot, self).__init__([(self.server, self.port)],
+                                     self.nick, self.nick)
 
     def on_nicknameinuse(self, c, e):
         logger.info("Nickname in use, trying alternative")

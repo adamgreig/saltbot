@@ -121,7 +121,7 @@ class SaltBot:
     def process_irc_command(self, who, message):
         logger.info("Processing IRC command <{}> {}".format(who, message))
         if " " in message:
-            cmd, arg = message.split(maxsplit=1)
+            cmd, arg = message.split(None, 1)
             arg = arg.strip()
         else:
             cmd = message.strip()
