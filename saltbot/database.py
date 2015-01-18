@@ -6,7 +6,7 @@ import logging
 
 from peewee import Proxy, SqliteDatabase, PostgresqlDatabase
 from peewee import Model, CharField, TextField, DateTimeField, ForeignKeyField
-from peewee import BooleanField
+from peewee import BooleanField, IntegerField
 
 DBProxy = Proxy()
 logger = logging.getLogger("saltbot.database")
@@ -50,6 +50,8 @@ class SaltMinionResult(BaseModel):
     key_name = CharField(null=True)
     key_func = CharField(null=True)
     comment = TextField(null=True)
+    run_num = IntegerField(null=True)
+    changed = BooleanField(null=True)
     result = BooleanField()
     output = TextField()
 

@@ -94,6 +94,8 @@ class SaltShaker:
         try:
             dbresult.result = bool(val['result'])
             dbresult.comment = str(val['comment'])
+            dbresult.run_num = int(val['__run_num__'])
+            dbresult.changed = val['changes'] != {}
         except KeyError:
             dbresult.result = False
         dbresult.save()

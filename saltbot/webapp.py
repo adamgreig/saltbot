@@ -192,7 +192,7 @@ def minionresults(jid, minion):
     resultsq = (SaltMinionResult
                 .select()
                 .join(SaltJobMinion)
-                .order_by(SaltMinionResult.id.desc())
+                .order_by(SaltMinionResult.run_num.asc())
                 .where(SaltMinionResult.minion == minion))
     results = [serialise(r) for r in resultsq.iterator()]
 

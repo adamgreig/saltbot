@@ -129,10 +129,12 @@
         Minion.get {jid: $routeParams.jid, id: $routeParams.id}
         .$promise.then (minion) ->
           minion.results = for result in minion.results
-            if result.result
-              result.indicator = 'success'
-            else
+            if not result.result
               result.indicator = 'danger'
+            else if result.changed
+              result.indicator = 'info'
+            else
+              result.indicator = 'success'
             result.output_pretty = JSON.stringify result.output, undefined, 2
             result
           $scope.minion = minion
