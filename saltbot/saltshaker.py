@@ -6,7 +6,12 @@ import time
 import json
 import logging
 import datetime
-from queue import Empty
+
+try:
+    from queue import Empty
+    from imp import reload
+except ImportError:
+    from Queue import Empty
 
 logger = logging.getLogger('saltbot.saltshaker')
 
@@ -17,8 +22,8 @@ except NameError:
 else:
     import imp
     from . import fakesalt, database
-    imp.reload(fakesalt)
-    imp.reload(database)
+    reload(fakesalt)
+    reload(database)
 
 
 try:

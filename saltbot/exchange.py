@@ -5,7 +5,12 @@
 import time
 import logging
 import datetime
-from queue import Empty
+
+try:
+    from queue import Empty
+    from imp import reload
+except ImportError:
+    from Queue import Empty
 
 try:
     reloading
@@ -14,7 +19,7 @@ except NameError:
 else:
     import imp
     from . import database
-    imp.reload(database)
+    reload(database)
 
 from .database import Database, GitHubPush
 

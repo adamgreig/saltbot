@@ -12,7 +12,12 @@ from tornado.ioloop import IOLoop
 from tornado.netutil import bind_unix_socket
 from peewee import fn, JOIN_LEFT_OUTER, SQL
 
-# This cute trick ensures that if someone calls imp.reload(webapp), we'll
+try:
+    from imp import reload
+except ImportError:
+    pass
+
+# This cute trick ensures that if someone calls reload(webapp), we'll
 # reload our own local dependencies that may also have changed.
 try:
     reloading
@@ -22,8 +27,8 @@ else:
     import imp
     from . import database
     from . import serialisers
-    imp.reload(database)
-    imp.reload(serialisers)
+    reload(database)
+    reload(serialisers)
 
 from .database import Database
 from .database import GitHubPush, SaltJob, SaltJobMinion, SaltMinionResult

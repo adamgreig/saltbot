@@ -8,11 +8,15 @@ __version_info__ = tuple([int(d) for d in __version__.split(".")])
 __license__ = "MIT License"
 
 import sys
-import imp
 import time
 import logging
 import multiprocessing
-from queue import Empty
+
+try:
+    from queue import Empty
+    from imp import reload
+except ImportError:
+    from Queue import Empty
 
 from . import config
 from . import webapp
@@ -149,7 +153,7 @@ class SaltBot:
         else:
             self.irc_send(who, "Reloading {}".format(arg))
             logger.info("Reloading {}".format(arg))
-            imp.reload(globals()[arg])
+            reload(globals()[arg])
             if arg == "config":
                 self.cfg = config.ConfigParser().load()
             elif arg == "webapp":
