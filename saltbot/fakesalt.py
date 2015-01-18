@@ -37,8 +37,9 @@ def random_results(n):
         r['start'] = datetime.datetime.now().strftime("%H:%M:%S.%f")
         r['result'] = random.choice([True]*9 + [False])
         r['duration'] = random.randrange(10000) / 1000.0
-        r['changes'] = {'frobbable': True}
+        r['changes'] = random.choice([{}, {}, {}, {}, {'modified': 'things'}])
         r['warnings'] = ["this was generated using FakeSalt!"]
+        r['__run_num__'] = random.randrange(200)
         results[key] = r
     return results
 
