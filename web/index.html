@@ -6,7 +6,6 @@
     <base href="/">
     <title>Saltbot</title>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css">
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootswatch/3.3.1/darkly/bootstrap.min.css">
     <style type="text/css">
       .model-btn {
@@ -50,43 +49,43 @@
       App = angular.module 'saltbot', ['ngResource', 'ngRoute']
 
       .config ($resourceProvider, $routeProvider, $locationProvider) ->
-          $resourceProvider.defaults.stripTrailingSlashes = false
-          $routeProvider
-          .when '/',
-              controller: 'JobsCtrl'
-              templateUrl: 'jobs.html'
-          .when '/pushes/:id',
-              controller: 'PushCtrl'
-              templateUrl: 'push.html'
-          .when '/jobs/:jid',
-              controller: 'JobCtrl'
-              templateUrl: 'job.html'
-          .when '/jobs/:jid/minions/:id',
-              controller: 'MinionCtrl'
-              templateUrl: 'minion.html'
-          $locationProvider.html5Mode true
+        $resourceProvider.defaults.stripTrailingSlashes = false
+        $routeProvider
+        .when '/',
+          controller: 'JobsCtrl'
+          templateUrl: 'jobs.html'
+        .when '/pushes/:id',
+          controller: 'PushCtrl'
+          templateUrl: 'push.html'
+        .when '/jobs/:jid',
+          controller: 'JobCtrl'
+          templateUrl: 'job.html'
+        .when '/jobs/:jid/minions/:id',
+          controller: 'MinionCtrl'
+          templateUrl: 'minion.html'
+        $locationProvider.html5Mode true
 
       .factory 'Push', ($resource) ->
-          $resource '/api/pushes/:id'
+        $resource '/api/pushes/:id'
 
       .factory 'Job', ($resource) ->
-          $resource '/api/jobs/:jid', {},
-              query:
-                  method: 'GET'
-                  isArray: true
-                  transformResponse: (data) ->
-                      JSON.parse(data).jobs
+        $resource '/api/jobs/:jid', {},
+          query:
+            method: 'GET'
+            isArray: true
+            transformResponse: (data) ->
+              JSON.parse(data).jobs
 
       .factory 'Minion', ($resource) ->
-          $resource '/api/jobs/:jid/minions/:id'
+        $resource '/api/jobs/:jid/minions/:id'
 
       .controller 'JobsCtrl', ($scope, $timeout, $routeParams, Job) ->
         tick = ->
-          jobs = Job.query {}, (jobs) ->
-            to_promise = $timeout(tick, 2000)
+          Job.query {}, (jobs) ->
+            to_promise = $timeout tick, 2000
             $scope.$on '$destroy', ->
-              $timeout.cancel(to_promise)
-          jobs.$promise.then (jobs) ->
+              $timeout.cancel to_promise
+          .$promise.then (jobs) ->
               $scope.jobs = for job in jobs
                   if job.all_in and job.no_errors
                       job.indicator = 'success'
@@ -105,11 +104,11 @@
 
       .controller 'JobCtrl', ($scope, $timeout, $routeParams, Job) ->
         tick = ->
-          job = Job.get {jid: $routeParams.jid}, (job) ->
-            to_promise = $timeout(tick, 2000)
+          Job.get {jid: $routeParams.jid}, (job) ->
+            to_promise = $timeout tick, 2000
             $scope.$on '$destroy', ->
-              $timeout.cancel(to_promise)
-          job.$promise.then (job) ->
+              $timeout.cancel to_promise
+          .$promise.then (job) ->
             $scope.job = job
             $scope.job.minions = for minion in job.minions
               if minion.num_results > 0 and minion.no_errors
@@ -117,7 +116,8 @@
                 minion.state = "#{ minion.num_good } states successful"
               else if not minion.no_errors
                 minion.indicator = 'danger'
-                minion.state = "#{ minion.num_good } states successful, #{ minion.num_errors } in error"
+                minion.state = "#{ minion.num_good } states successful,
+                                #{ minion.num_errors } in error"
               else
                 minion.indicator = 'warning'
                 minion.state = "Waiting for results"
@@ -126,21 +126,16 @@
         tick()
 
       .controller 'MinionCtrl', ($scope, $timeout, $routeParams, Minion) ->
-        tick = ->
-          minion = Minion.get {jid: $routeParams.jid, id: $routeParams.id}, (minion) ->
-            to_promise = $timeout(tick, 2000)
-            $scope.$on '$destroy', ->
-              $timeout.cancel(to_promise)
-          minion.$promise.then (minion) ->
-            $scope.minion = minion
-            $scope.minion.results = for result in minion.results
-              if result.result
-                result.indicator = 'success'
-              else
-                result.indicator = 'danger'
-              result.output_pretty = JSON.stringify(result.output, undefined, 2)
-              result
-        tick()
+        Minion.get {jid: $routeParams.jid, id: $routeParams.id}
+        .$promise.then (minion) ->
+          minion.results = for result in minion.results
+            if result.result
+              result.indicator = 'success'
+            else
+              result.indicator = 'danger'
+            result.output_pretty = JSON.stringify result.output, undefined, 2
+            result
+          $scope.minion = minion
 
       angular.bootstrap document, ['saltbot']
     </script>
@@ -151,7 +146,6 @@
           <li class=active>Home</li>
         </ol>
       </div>
-
       <div class=container>
         <div ng-repeat="job in jobs">
           <a href="/pushes/{{job.push.id}}" class="btn btn-info model-btn">
@@ -183,7 +177,6 @@
           <li class="active">Job {{job.jid}}</li>
         </ol>
       </div>
-
       <div class=container>
         <div class="panel panel-default">
           <div class=panel-body>
@@ -197,7 +190,6 @@
           </div>
         </div>
       </div>
-
       <div class=container>
         <a
            ng-repeat="minion in job.minions"
@@ -217,7 +209,6 @@
           <li class="active">Push {{push.id}}</li>
         </ol>
       </div>
-
       <div class=container>
         <div class="panel panel-default">
           <div class=panel-heading>
@@ -233,7 +224,6 @@
             </a> on {{push.commit_ts}}
           </div>
         </div>
-
         <div class="panel panel-default">
           <div class=panel-heading>Push</div>
           <div class=panel-body>
@@ -262,10 +252,8 @@
           <li class="active">Minion {{minion.minion}}</li>
         </ol>
       </div>
-
       <div class="container">
         <div class=panel-group>
-
           <div ng-repeat="result in minion.results"
                class="panel panel-{{result.indicator}}">
             <div class="panel-heading" data-toggle=collapse
@@ -283,5 +271,4 @@
       </div>
     </script>
   </body>
-  
 </html>
