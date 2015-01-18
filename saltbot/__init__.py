@@ -211,10 +211,14 @@ def createtables():
     Creates DB tables
     Entry point: saltbot-createtables
     """
+    import peewee
     from . import database
     saltbot = SaltBot()
     db = database.Database(saltbot.cfg)
-    db.create_tables()
+    try:
+        db.create_tables()
+    except peewee.OperationalError as e:
+        print("Received error, ignoring:", e)
 
 
 def droptables():
