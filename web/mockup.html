@@ -1,0 +1,355 @@
+<!doctype html>
+<html ng-app>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Saltbot</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootswatch/3.3.1/darkly/bootstrap.min.css">
+    <style type="text/css">
+      .model-btn {
+          width: 400px;
+          margin: 0 10px 10px 10px;
+      }
+
+      .btn-title {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          font-weight: bold;
+          font-size: 1.2em;
+      }
+
+      .btn-body {
+          white-space: normal;
+      }
+    </style>
+  </head>
+
+  <body>
+    <nav class="navbar navbar-default navbar-static-top">
+      <div class="container">
+        <div class="navbar-header">
+          <a class="navbar-brand" href="/">Saltbot</a>
+        </div>
+      </div>
+    </nav>
+
+    <hr> <!-- ############################################################ -->
+    <a id=home />
+
+    <div class="container">
+      <ol class="breadcrumb">
+        <li class=active>Home</li>
+      </ol>
+    </div>
+
+    <div class=container>
+      <div>
+        <a href="#push" class="btn btn-info model-btn">
+          <div class=btn-title>ah, remove trailing `.'</div>
+          <div class=btn-body><em>by</em> adamgreig <em>at</em> 2015-01-14 19:03:07</div>
+          <div class=btn-body><em>to</em> ukhas/habcloud-salt-states master</div>
+        </a>
+        <span class="glyphicon glyphicon-arrow-right"></span>
+        <a href="#job" class="btn btn-warning model-btn">
+          <div class=btn-title>Job 20150117181812</div>
+          <div class=btn-body><em>targetting</em> <code>adam*.habhub.org</code></div>
+          <div class=btn-body>5 minions are OK, 1 running</div>
+        </a>
+      </div>
+
+      <div>
+        <a href="#push" class="btn btn-info model-btn">
+          <div class=btn-title>Have nginx serve up favicon.ico and robots.txt default for all sites</div>
+          <div class=btn-body><em>by</em> adamgreig <em>at</em> 2015-01-14 19:03:07</div>
+          <div class=btn-body><em>to</em> ukhas/habcloud-salt-states master</div>
+        </a>
+        <span class="glyphicon glyphicon-arrow-right"></span>
+        <a href="#job" class="btn btn-success model-btn">
+          <div class=btn-title>Job 20150117181811</div>
+          <div class=btn-body><em>targetting</em> <code>adam*.habhub.org</code></div>
+          <div class=btn-body>12 minions are OK</div>
+        </a>
+      </div>
+
+      <div>
+        <a href="#push" class="btn btn-info model-btn">
+          <div class=btn-title>put gunicorn install and supervisor watching into macro too</div>
+          <div class=btn-body><em>by</em> adamgreig <em>at</em> 2015-01-14 19:03:07</div>
+          <div class=btn-body><em>to</em> ukhas/habcloud-salt-states master</div>
+        </a>
+        <span class="glyphicon glyphicon-arrow-right"></span>
+        <a href="#job" class="btn btn-danger model-btn">
+          <div class=btn-title>Job 20150117181810</div>
+          <div class=btn-body><em>targetting</em> <code>adam*.habhub.org</code></div>
+          <div class=btn-body>10 minions are OK, 2 in error</div>
+        </a>
+      </div>
+    </div>
+
+    <div style="height: 1000px"></div>
+    <hr> <!-- ############################################################ -->
+    <a id=push />
+
+    <div class="container">
+      <ol class="breadcrumb">
+        <li><a href="#home">Home</a></li>
+        <li class="active">Push 145</li>
+      </ol>
+    </div>
+
+    <div class=container>
+      <div class="panel panel-default">
+        <div class=panel-heading>
+          Commit
+          <a href="https://github.com/ukhas/habcloud-salt-states/commit/7e6f8dec271c1bbf97f20efe708d1dd99e479fb2">
+            7e6f8dec271c1bbf97f20efe708d1dd99e479fb2
+          </a>
+        </div>
+        <div class=panel-body>
+          <blockquote>ah, remove trailing `.'</blockquote>
+          <a href="https://github.com/adamgreig">adamgreig</a> on 2015-01-14 12:45:23
+        </div>
+      </div>
+
+      <div class="panel panel-default">
+        <div class=panel-heading>Push</div>
+        <div class=panel-body>
+          <p>
+            Pushed to
+            <a href="https://github.com/ukhas/habcloud-salt-states">ukhas/habcloud-salt-states</a>
+            branch
+            <a href="https://github.com/ukhas/habcloud-salt-states/tree/master">master</a>
+            by
+            <a href="https://github.com/adamgreig">adamgreig</a>
+            on 2015-01-14 12:46:00
+          </p>
+          <p>Triggered <a href=#job>Job 20150117181920</a></p>
+        </div>
+      </div>
+    </div>
+
+    <div style="height: 1000px"></div>
+    <hr> <!-- ############################################################ -->
+    <a id=job>
+
+    <div class="container">
+      <ol class="breadcrumb">
+        <li><a href="#home">Home</a></li>
+        <li class="active">Job 20150117181920</li>
+      </ol>
+    </div>
+
+    <div class=container>
+      <div class="panel panel-default">
+        <div class=panel-body>
+          <p>Job started at 2015-01-20 15:34:12, targetting (glob) <code>adam*.habhub.org</code></p>
+          <p>Triggered by <a href=#push>push 145</a></p>
+        </div>
+      </div>
+    </div>
+
+    <div class=container>
+      <a href="#minion" class="btn btn-success model-btn">
+        <div class=btn-title>adam1.habhub.org</div>
+        <div class=btn-body>45 states successful</div>
+      </a>
+      <a href="#minion" class="btn btn-success model-btn">
+        <div class=btn-title>adam2.habhub.org</div>
+        <div class=btn-body>45 states successful</div>
+      </a>
+      <a href="#minion" class="btn btn-success model-btn">
+        <div class=btn-title>adam3.habhub.org</div>
+        <div class=btn-body>45 states successful</div>
+      </a>
+      <a href="#minion" disabled class="btn btn-warning model-btn">
+        <div class=btn-title>adam4.habhub.org</div>
+        <div class=btn-body>45 states running</div>
+      </a>
+      <a href="#minion" class="btn btn-success model-btn">
+        <div class=btn-title>adam5.habhub.org</div>
+        <div class=btn-body>45 states successful</div>
+      </a>
+      <a href="#minion" class="btn btn-danger model-btn">
+        <div class=btn-title>adam6.habhub.org</div>
+        <div class=btn-body>40 states successful, 5 errors</div>
+      </a>
+    </div>
+
+    <div style="height: 1000px"></div>
+    <hr> <!-- ############################################################ -->
+    <a id=minion />
+
+    <div class="container">
+      <ol class="breadcrumb">
+        <li><a href="#home">Home</a></li>
+        <li><a href="#job">Job 20150117181920</a></li>
+        <li class="active">Minion adam2.habhub.org</li>
+      </ol>
+    </div>
+
+    <div class="container">
+      <div class=panel-group>
+
+        <div class="panel panel-success">
+          <div class="panel-heading" data-toggle=collapse data-target=#collapse1>
+            leaf: git.latest kitten
+          </div>
+          <div class="panel-collapse collapse" id=collapse1>
+            <div class=panel-body>
+<pre>
+{
+  "changes": {
+    "frobbable": true
+  },
+  "start": "08:20:12.468755",
+  "name": "kitten",
+  "result": false,
+  "warnings": [
+    "this was generated using FakeSalt!"
+  ],
+  "duration": 2.299,
+  "comment": "Lorem ipsum dolor sit amet"
+}
+</pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel panel-success">
+          <div class="panel-heading" data-toggle=collapse data-target=#collapse2>
+            muffin: pkg.present puppy
+          </div>
+          <div class="panel-collapse collapse" id=collapse2>
+            <div class=panel-body>
+<pre>
+{
+  "changes": {
+    "frobbable": true
+  },
+  "start": "08:20:12.468755",
+  "name": "kitten",
+  "result": false,
+  "warnings": [
+    "this was generated using FakeSalt!"
+  ],
+  "duration": 2.299,
+  "comment": "Lorem ipsum dolor sit amet"
+}
+</pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel panel-danger">
+          <div class="panel-heading" data-toggle=collapse data-target=#collapse3>
+            kitten: postgres_user.present flower
+          </div>
+          <div class="panel-collapse collapse" id=collapse3>
+            <div class=panel-body>
+<pre>
+{
+  "changes": {
+    "frobbable": true
+  },
+  "start": "08:20:12.468755",
+  "name": "kitten",
+  "result": false,
+  "warnings": [
+    "this was generated using FakeSalt!"
+  ],
+  "duration": 2.299,
+  "comment": "Lorem ipsum dolor sit amet"
+}
+</pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel panel-success">
+          <div class="panel-heading" data-toggle=collapse data-target=#collapse4>
+            puppy: service.running muffin
+          </div>
+          <div class="panel-collapse collapse" id=collapse4>
+            <div class=panel-body>
+<pre>
+{
+  "changes": {
+    "frobbable": true
+  },
+  "start": "08:20:12.468755",
+  "name": "kitten",
+  "result": false,
+  "warnings": [
+    "this was generated using FakeSalt!"
+  ],
+  "duration": 2.299,
+  "comment": "Lorem ipsum dolor sit amet"
+}
+</pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel panel-success">
+          <div class="panel-heading" data-toggle=collapse data-target=#collapse5>
+            leaf: git.latest kitten
+          </div>
+          <div class="panel-collapse collapse" id=collapse5>
+            <div class=panel-body>
+<pre>
+{
+  "changes": {
+    "frobbable": true
+  },
+  "start": "08:20:12.468755",
+  "name": "kitten",
+  "result": false,
+  "warnings": [
+    "this was generated using FakeSalt!"
+  ],
+  "duration": 2.299,
+  "comment": "Lorem ipsum dolor sit amet"
+}
+</pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel panel-success">
+          <div class="panel-heading" data-toggle=collapse data-target=#collapse6>
+            puppy: pkg.present leaf
+          </div>
+          <div class="panel-collapse collapse" id=collapse6>
+            <div class=panel-body>
+<pre>
+{
+  "changes": {
+    "frobbable": true
+  },
+  "start": "08:20:12.468755",
+  "name": "kitten",
+  "result": false,
+  "warnings": [
+    "this was generated using FakeSalt!"
+  ],
+  "duration": 2.299,
+  "comment": "Lorem ipsum dolor sit amet"
+}
+</pre>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div style="height: 1000px"></div>
+
+  </body>
+  
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/js/bootstrap.min.js"></script>
+</html>
