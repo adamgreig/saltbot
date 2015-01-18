@@ -3,6 +3,7 @@
 # Licensed under the MIT license, see LICENCE file for details.
 
 
+import time
 import random
 import datetime
 
@@ -46,14 +47,25 @@ def make_jid():
     return datetime.datetime.now().strftime("%Y%m%d%H%M%S%f")
 
 
-class FakeSalt:
+class client:
+    class zmq:
+        class ZMQError:
+            pass
 
-    def run_job(self, tgt, fun, arg=(), expr_form='glob', ret='',
-                timeout=None, jid='', kwarg=None, **kwargs):
-        n = random.randrange(1, 6)
-        return {"jid": make_jid(), "minions": random_names(n)}
+    class LocalClient:
+        class Event:
+            def get_event_noblock(self):
+                time.sleep(1)
+                return {"tag": "salt/fileserver/gitfs/update"}
+        event = Event()
+        opts = {}
 
-    def get_iter_returns(self, jid, minions, **kwargs):
-        for minion in minions:
-            n = random.randrange(5, 15)
-            yield {minion: {'ret': random_results(n), 'out': 'highstate'}}
+        def run_job(self, tgt, fun, arg=(), expr_form='glob', ret='',
+                    timeout=None, jid='', kwarg=None, **kwargs):
+            n = random.randrange(1, 6)
+            return {"jid": make_jid(), "minions": random_names(n)}
+
+        def get_iter_returns(self, jid, minions, **kwargs):
+            for minion in minions:
+                n = random.randrange(5, 15)
+                yield {minion: {'ret': random_results(n), 'out': 'highstate'}}

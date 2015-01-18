@@ -4,6 +4,7 @@
 
 import time
 import json
+import errno
 import logging
 import datetime
 
@@ -27,12 +28,10 @@ else:
 
 try:
     import salt.client
-    salt_client = salt.client.LocalClient()
 except ImportError:
     import warnings
     warnings.warn("Could not import 'salt', will use fake salt.")
-    from . import fakesalt
-    salt_client = fakesalt.FakeSalt()
+    from . import fakesalt as salt
 
 from .database import Database, SaltJob, SaltJobMinion, SaltMinionResult
 
@@ -42,6 +41,7 @@ class SaltShaker:
         self.cfg = config
         self.sltcq = sltcq
         self.sltrq = sltrq
+        self.client = salt.client.LocalClient()
         self.db = Database(config)
         self.db.connect()
 
@@ -58,9 +58,9 @@ class SaltShaker:
                     self.highstate(*arg)
 
     def start_salt(self, tgt, expr):
-        job = salt_client.run_job(tgt, 'state.highstate', expr_form=expr)
+        job = self.client.run_job(tgt, 'state.highstate', expr_form=expr)
         jid, minions = job['jid'], job['minions']
-        iter_returns = salt_client.get_iter_returns(
+        iter_returns = self.client.get_iter_returns(
             jid, minions, tgt=tgt, tgt_type=expr)
         return jid, minions, iter_returns
 
@@ -100,7 +100,48 @@ class SaltShaker:
             dbresult.result = False
         dbresult.save()
 
-    def highstate(self, target, expr, gh_push_id):
+    def wait_gitfs(self):
+        """
+        Watch Salt events, waiting for a gitfs refresh, then return.
+        Times out after 5 minutes too.
+        """
+        start = datetime.datetime.now()
+        event = self.client.event
+        tag = "salt/fileserver/gitfs/update"
+        logger.info("Waiting for gitfs refresh")
+
+        while True:
+            time.sleep(1)
+
+            now = datetime.datetime.now()
+            if (now - start).seconds > 5 * 60:
+                logger.warning("Timed out waiting for gitfs refresh")
+                break
+
+            if self.client.opts.get('transport') == 'zeromq':
+                try:
+                    raw = event.get_event_noblock()
+                    logger.debug("Saw event: {}".format(raw.get('tag')))
+                    if raw and raw.get('tag', '') == tag:
+                        logger.info("Saw gitfs update event")
+                        break
+                except salt.client.zmq.ZMQError as e:
+                    if e.errno == errno.EAGAIN or e.errno == errno.EINTR:
+                        continue
+                    else:
+                        logger.warning("Error fetching events, skipping")
+                        break
+            else:
+                raw = event.get_event_noblock()
+                logger.debug("Saw event: {}".format(raw.get('tag')))
+                if raw and raw.get('tag', '') == tag:
+                    logger.info("Saw gitfs update event")
+                    break
+
+    def highstate(self, target, expr, wait_gitfs, gh_push_id):
+        if wait_gitfs:
+            self.wait_gitfs()
+
         jid, minions, iter_returns = self.start_salt(target, expr)
         dbjob, dbminions = self.create_records(
             target, expr, jid, minions, gh_push_id)

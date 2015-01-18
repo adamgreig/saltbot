@@ -69,14 +69,17 @@ class Exchange:
                 logger.info("Push received to a configured branch")
                 target = repo_cfg[branch]['target']
                 expr_form = repo_cfg[branch].get('expr_form', 'glob')
-                logger.info("Target ({}): {}"
-                            .format(expr_form, target))
+                wait_gitfs = repo_cfg[branch].get('wait_gitfs', False)
+                logger.info("Target (expr_form={}, wait_gitfs={}): {}"
+                            .format(expr_form, wait_gitfs, target))
                 self.ircmq.put(
-                    ("pubmsg", "Push to {} {} by {}, highstating {} {}"
+                    ("pubmsg", "Push to {} {} by {}, highstating {} {}{}"
                                .format(push['repo_name'], branch,
                                        push['pusher'], expr_form,
-                                       target)))
-                self.sltcq.put(("highstate", (target, expr_form, ghpush.id)))
+                                       target, " (waiting for gitfs)"
+                                       if wait_gitfs else "")))
+                self.sltcq.put(("highstate", (target, expr_form,
+                                              wait_gitfs, ghpush.id)))
             else:
                 logger.info("Push was not to a configured branch")
         else:

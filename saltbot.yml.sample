@@ -65,6 +65,10 @@ logs:
 # For each branch, specify a target, which may be a string or a list of
 # strings, and an expr_form, which is one of:
 # glob, pcre, list, grain, grain_pcre, pillar, nodegroup, range, or compound
+# expr_form defaults to 'glob', which is the `salt' shell default.
+#
+# Optionally specify wait_gitfs: true to have this target wait for the next
+# gitfs refresh before running (e.g. if the repository is your salt states).
 #
 # When a push comes in to a branch on a repository configured here, saltbot
 # runs state.highstate on the given target with expr_form set as configured.
@@ -78,5 +82,6 @@ repos:
     branch2:
       target: "adam[0-9]"
       expr_form: pcre
+      wait_gitfs: true
     branch3:
       target: adam*
