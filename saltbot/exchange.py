@@ -17,7 +17,6 @@ try:
 except NameError:
     reloading = False
 else:
-    import imp
     from . import database
     reload(database)
 

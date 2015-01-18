@@ -3,6 +3,7 @@
 # Licensed under the MIT license, see LICENCE file for details.
 
 import hmac
+import hashlib
 import logging
 
 from flask import Flask, request, g, jsonify, abort
@@ -24,7 +25,6 @@ try:
 except NameError:
     reloading = False
 else:
-    import imp
     from . import database
     from . import serialisers
     reload(database)
@@ -199,7 +199,7 @@ def webhook():
 
     secret = app.config['github']['secret'].encode()
     their_sig = request.headers.get('X-Hub-Signature')
-    my_sig = hmac.new(secret, request.data, 'SHA1').hexdigest()
+    my_sig = hmac.new(secret, request.data, hashlib.SHA1).hexdigest()
     if not hmac.compare_digest(their_sig, "sha1={}".format(my_sig)):
         logger.warn("Invalid signature received!")
         return "Invalid signature", 403

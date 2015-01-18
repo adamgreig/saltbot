@@ -20,7 +20,6 @@ try:
 except NameError:
     reloading = False
 else:
-    import imp
     from . import fakesalt, database
     reload(fakesalt)
     reload(database)
@@ -30,7 +29,8 @@ try:
     import salt.client
     salt_client = salt.client.LocalClient()
 except ImportError:
-    logger.warn("Could not import 'salt', will use fake salt.")
+    import warnings
+    warnings.warn("Could not import 'salt', will use fake salt.")
     from . import fakesalt
     salt_client = fakesalt.FakeSalt()
 

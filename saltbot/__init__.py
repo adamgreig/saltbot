@@ -18,6 +18,8 @@ try:
 except ImportError:
     from Queue import Empty
 
+logger = logging.getLogger("saltbot")
+
 from . import config
 from . import webapp
 from . import ircbot
@@ -25,7 +27,6 @@ from . import exchange
 from . import saltshaker
 
 modules = ("config", "webapp", "ircbot", "exchange", "saltshaker")
-logger = logging.getLogger("saltbot")
 
 
 class SaltBot:
