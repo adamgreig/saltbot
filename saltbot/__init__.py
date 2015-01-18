@@ -66,6 +66,7 @@ class SaltBot:
         self.excp = multiprocessing.Process(
             target=exchange.run, name="Saltbot Exchange",
             args=(self.cfg, self.ircmq, self.webpq, self.sltcq, self.sltrq))
+        self.excp.daemon = True
         self.excp.start()
 
     def start_irc(self):
@@ -73,6 +74,7 @@ class SaltBot:
         self.ircp = multiprocessing.Process(
             target=ircbot.run, name="Saltbot IRC",
             args=(self.cfg, self.ircmq, self.irccq))
+        self.ircp.daemon = True
         self.ircp.start()
 
     def start_slt(self):
@@ -80,6 +82,7 @@ class SaltBot:
         self.sltp = multiprocessing.Process(
             target=saltshaker.run, name="Saltbot Salt",
             args=(self.cfg, self.sltcq, self.sltrq))
+        self.sltp.daemon = True
         self.sltp.start()
 
     def start_web(self):
@@ -87,6 +90,7 @@ class SaltBot:
         self.webp = multiprocessing.Process(
             target=webapp.run, name="Saltbot Web",
             args=(self.cfg, self.webpq))
+        self.webp.daemon = True
         self.webp.start()
 
     def loop(self):
