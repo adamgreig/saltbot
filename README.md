@@ -3,7 +3,7 @@ An IRC bot for [Salt](http://www.saltstack.com/community/) deployments.
 
 ## Install
 
-Currently requires Python 3.4.
+Currently runs on Python 2.7, 3.3 and 3.4.
 
     $ git clone https://github.com/adamgreig/saltbot.git
     $ cd saltbot
