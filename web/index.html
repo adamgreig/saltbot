@@ -42,9 +42,9 @@
 
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/js/bootstrap.min.js"></script>
-    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.3.9/angular.js"></script>
-    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.3.9/angular-resource.js"></script>
-    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.3.9/angular-route.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.3.9/angular.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.3.9/angular-resource.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.3.9/angular-route.min.js"></script>
     <script src="http://cdnjs.cloudflare.com/ajax/libs/coffee-script/1.7.1/coffee-script.min.js"></script>
     <script type="text/coffeescript">
       App = angular.module 'saltbot', ['ngResource', 'ngRoute']
@@ -80,8 +80,13 @@
       .factory 'Minion', ($resource) ->
           $resource '/api/jobs/:jid/minions/:id'
 
-      .controller 'JobsCtrl', ($scope, $routeParams, Job) ->
-          Job.query().$promise.then (jobs) ->
+      .controller 'JobsCtrl', ($scope, $timeout, $routeParams, Job) ->
+        tick = ->
+          jobs = Job.query {}, (jobs) ->
+            to_promise = $timeout(tick, 2000)
+            $scope.$on '$destroy', ->
+              $timeout.cancel(to_promise)
+          jobs.$promise.then (jobs) ->
               $scope.jobs = for job in jobs
                   if job.all_in and job.no_errors
                       job.indicator = 'success'
@@ -93,36 +98,49 @@
                       job.indicator = 'warning'
                       job.status = 'Waiting for results'
                   job
+        tick()
 
       .controller 'PushCtrl', ($scope, $routeParams, Push) ->
         $scope.push = Push.get(id: $routeParams.id)
 
-      .controller 'JobCtrl', ($scope, $routeParams, Job) ->
-        $scope.job = Job.get(jid: $routeParams.jid)
-        $scope.job.$promise.then (job) ->
-          $scope.job.minions = for minion in job.minions
-            if minion.num_results > 0 and minion.no_errors
-              minion.indicator = 'success'
-              minion.state = "#{ minion.num_good } states successful"
-            else if not minion.no_errors
-              minion.indicator = 'danger'
-              minion.state = "#{ minion.num_good } states successful, #{ minion.num_errors } in error"
-            else
-              minion.indicator = 'warning'
-              minion.state = "Waiting for results"
-              minion.disabled = true
-            minion
+      .controller 'JobCtrl', ($scope, $timeout, $routeParams, Job) ->
+        tick = ->
+          job = Job.get {jid: $routeParams.jid}, (job) ->
+            to_promise = $timeout(tick, 2000)
+            $scope.$on '$destroy', ->
+              $timeout.cancel(to_promise)
+          job.$promise.then (job) ->
+            $scope.job = job
+            $scope.job.minions = for minion in job.minions
+              if minion.num_results > 0 and minion.no_errors
+                minion.indicator = 'success'
+                minion.state = "#{ minion.num_good } states successful"
+              else if not minion.no_errors
+                minion.indicator = 'danger'
+                minion.state = "#{ minion.num_good } states successful, #{ minion.num_errors } in error"
+              else
+                minion.indicator = 'warning'
+                minion.state = "Waiting for results"
+                minion.disabled = true
+              minion
+        tick()
 
-      .controller 'MinionCtrl', ($scope, $routeParams, Minion) ->
-        $scope.minion = Minion.get(jid: $routeParams.jid, id: $routeParams.id)
-        $scope.minion.$promise.then (minion) ->
-          $scope.minion.results = for result in minion.results
-            if result.result
-              result.indicator = 'success'
-            else
-              result.indicator = 'danger'
-            result.output_pretty = JSON.stringify(result.output, undefined, 2)
-            result
+      .controller 'MinionCtrl', ($scope, $timeout, $routeParams, Minion) ->
+        tick = ->
+          minion = Minion.get {jid: $routeParams.jid, id: $routeParams.id}, (minion) ->
+            to_promise = $timeout(tick, 2000)
+            $scope.$on '$destroy', ->
+              $timeout.cancel(to_promise)
+          minion.$promise.then (minion) ->
+            $scope.minion = minion
+            $scope.minion.results = for result in minion.results
+              if result.result
+                result.indicator = 'success'
+              else
+                result.indicator = 'danger'
+              result.output_pretty = JSON.stringify(result.output, undefined, 2)
+              result
+        tick()
 
       angular.bootstrap document, ['saltbot']
     </script>
@@ -209,7 +227,7 @@
             </a>
           </div>
           <div class=panel-body>
-            <blockquote>{{push.commit_msg}}</blockquote>
+            <blockquote><pre>{{push.commit_msg}}</pre></blockquote>
             <a href="https://github.com/{{push.commit_author}}">
               {{push.commit_author}}
             </a> on {{push.commit_ts}}
@@ -230,7 +248,7 @@
               <a href="https://github.com/{{push.pusher}}">{{push.pusher}}</a>
               on {{push.when}}
             </p>
-            <p>Triggered <a href=/job/{{push.job_jid}}>Job {{push.job_jid}}</a></p>
+            <p>Triggered <a href=/jobs/{{push.job_jid}}>Job {{push.job_jid}}</a></p>
           </div>
         </div>
       </div>

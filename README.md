@@ -20,21 +20,22 @@ Currently requires Python 3.4.
     [2015-01-08 06:46:33,346] INFO saltbot: Loading config
     [2015-01-08 06:46:33,350] INFO saltbot: Saltbot starting up
     [2015-01-08 06:46:33,356] INFO saltbot.exchange: Exchange started
-    saltbot command console
-    commands:
-      quit               Closes saltbot
-      help               Display this message
-      say <message>      Says <message> on IRC
-      reload <module>    Reloads <module>, one of:
-         webapp, ircbot, exchange, saltshaker
     [2015-01-08 06:46:33,358] INFO saltbot.http: App starting up
     [2015-01-08 06:46:33,358] INFO saltbot.ircbot: Connecting to server
     [2015-01-08 06:46:39,655] INFO saltbot.ircbot: Welcome message received, joining channel
     [2015-01-08 06:46:46,385] INFO saltbot.ircbot: Joined channel #saltbot
-    > say hi
-    Saying hi
-    > reload webapp
-    Reloading webapp
+
+Meanwhile, on IRC (via privmsg):
+
+    07:07:07 adamgreig> help
+    07:07:09 saltbot> Available commands:
+    07:07:09 saltbot>   quit               Closes saltbot
+    07:07:09 saltbot>   help               Display this message
+    07:07:09 saltbot>   say <message>      Says <message> on IRC
+    07:07:09 saltbot>   reload <module>    Reloads <module>, one of:
+    07:07:10 saltbot>     config, webapp, ircbot, exchange, saltshaker
+    07:07:15 adamgreig> reload webapp
+    07:07:17 saltbot> Reloading webapp
 
 ## Configuration
 

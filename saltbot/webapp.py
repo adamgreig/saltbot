@@ -119,11 +119,11 @@ def jobs():
             .select(SaltJob, no_errors_int, got_results)
             .join(SaltJobMinion, JOIN_LEFT_OUTER)
             .join(SaltMinionResult, JOIN_LEFT_OUTER)
-            .order_by(SaltJob.when)
             .group_by(SaltJob, SaltJobMinion))
     jobsq = (SaltJob
              .select(job_fields, no_errors, all_in)
              .from_(subq.alias("subq"))
+             .order_by(SQL('"id" DESC'))
              .group_by(job_fields))
     page, pages, pp = get_page(jobsq)
     jobs = [g._serialise(j) for j in jobsq.paginate(page, pp).iterator()]

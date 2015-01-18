@@ -81,7 +81,8 @@ class Exchange:
     def handle_salt_started(self, args):
         jid, minions = args
         self.ircmq.put(
-            ("pubmsg", "Salt {} started to highstate {}".format(jid, minions)))
+            ("pubmsg", "Salt {} started to highstate {}"
+                       .format(jid, ', '.join(minions))))
         self.ircmq.put(
             ("pubmsg", "{}/jobs/{}".format(self.cfg['web']['url'], jid)))
 
