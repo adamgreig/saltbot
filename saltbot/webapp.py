@@ -37,6 +37,11 @@ from .serialisers import serialise
 app = Flask(__name__)
 logger = logging.getLogger("saltbot.http")
 
+if not hasattr(hmac, 'compare_digest'):
+    import warnings
+    warnings.warn("hmac module does not have compare_digest, will use insecure"
+                  " direct comparison.")
+
 
 def get_page(query):
     """Given a query object, work out relevant pagination numbers"""
@@ -60,6 +65,13 @@ def bool_sum(field):
         return fn.Sum(SQL(field))
     elif app.config['database']['engine'] == "postgresql":
         return fn.Sum(SQL("{}::int".format(field)))
+
+
+def compare_digest(a, b):
+    if hasattr(hmac, 'compare_digest'):
+        return hmac.compare_digest(a, b)
+    else:
+        return a == b
 
 
 @app.before_request
@@ -200,7 +212,7 @@ def webhook():
     secret = app.config['github']['secret'].encode()
     their_sig = request.headers.get('X-Hub-Signature')
     my_sig = hmac.new(secret, request.data, hashlib.sha1).hexdigest()
-    if not hmac.compare_digest(their_sig, "sha1={}".format(my_sig)):
+    if not compare_digest(their_sig, "sha1={}".format(my_sig)):
         logger.warn("Invalid signature received!")
         return "Invalid signature", 403
     logger.info("HMAC signature valid")
