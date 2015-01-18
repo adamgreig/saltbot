@@ -44,7 +44,7 @@ class SaltBot:
     def run(self):
         logger.info("Saltbot starting up")
 
-        # Set signals to ignore when creating Queues
+        # Ignore signals when creating Queues
         self.block_sigs()
 
         # IRC Message Queue, *->IRC
@@ -69,8 +69,8 @@ class SaltBot:
         self.loop()
 
     def block_sigs(self):
-        signal.signal(signal.SIGINT, signal.SIG_IGN)
-        signal.signal(signal.SIGTERM, signal.SIG_IGN)
+        signal.signal(signal.SIGINT, signal.SIG_DFL)
+        signal.signal(signal.SIGTERM, signal.SIG_DFL)
 
     def unblock_sigs(self):
         signal.signal(signal.SIGINT, self.signal)
@@ -148,9 +148,11 @@ class SaltBot:
             time.sleep(1)
 
     def signal(self, num, frame):
+        logger.warn("Terminating due to signal")
         self.terminate()
 
     def terminate(self):
+        logger.warn("Shutting down child processes")
         children = "excp", "sltp", "ircp", "webp"
         for child in children:
             if hasattr(self, child) and getattr(self, child) is not None:
@@ -164,6 +166,7 @@ class SaltBot:
                     getattr(self, child).join()
                 except AttributeError:
                     pass
+        logger.warn("Final exit")
         sys.exit()
 
     def process_irc_command(self, who, message):
