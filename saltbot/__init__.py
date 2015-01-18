@@ -9,6 +9,7 @@ __license__ = "MIT License"
 
 import sys
 import time
+import signal
 import logging
 import multiprocessing
 
@@ -32,6 +33,8 @@ modules = ("config", "webapp", "ircbot", "exchange", "saltshaker")
 class SaltBot:
     def __init__(self):
         self.cfg = config.ConfigParser().load()
+        signal.signal(signal.SIGINT, self.signal)
+        signal.signal(signal.SIGTERM, self.signal)
         self.commands = {
             "quit": self.command_quit,
             "say": self.command_say,
@@ -124,6 +127,20 @@ class SaltBot:
 
             time.sleep(1)
 
+    def signal(self, num, frame):
+        self.terminate()
+
+    def terminate(self):
+        self.excp.terminate()
+        self.sltp.terminate()
+        self.ircp.terminate()
+        self.webp.terminate()
+        self.excp.join()
+        self.sltp.join()
+        self.ircp.join()
+        self.webp.join()
+        sys.exit()
+
     def process_irc_command(self, who, message):
         logger.info("Processing IRC command <{}> {}".format(who, message))
         if len(message.split()) > 1:
@@ -208,18 +225,7 @@ class SaltBot:
     def command_quit(self, who, arg):
         self.irc_send(who, "Shutting down.")
         logger.warn("Quitting due to command")
-
-        self.excp.terminate()
-        self.sltp.terminate()
-        self.ircp.terminate()
-        self.webp.terminate()
-
-        self.excp.join()
-        self.sltp.join()
-        self.ircp.join()
-        self.webp.join()
-
-        sys.exit()
+        self.terminate()
 
     def command_say(self, who, arg):
         if arg:
