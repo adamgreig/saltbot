@@ -134,10 +134,16 @@ class SaltBot:
         children = "excp", "sltp", "ircp", "webp"
         for child in children:
             if hasattr(self, child) and getattr(self, child) is not None:
-                getattr(self, child).terminate()
+                try:
+                    getattr(self, child).terminate()
+                except AttributeError:
+                    pass
         for child in children:
             if hasattr(self, child) and getattr(self, child) is not None:
-                getattr(self, child).join()
+                try:
+                    getattr(self, child).join()
+                except AttributeError:
+                    pass
         sys.exit()
 
     def process_irc_command(self, who, message):
