@@ -7,8 +7,8 @@ from __future__ import print_function
 """
 Sample post-receive hook which sends notifications to Saltbot.
 
-$ git config hook.webhookurl http://saltbot.sample.com/api/webhook
-$ git config hook.webhooksecret hunter2
+$ git config hooks.webhookurl http://saltbot.sample.com/api/webhook
+$ git config hooks.webhooksecret hunter2
 $ cp saltbot/post-receive.py .git/hooks/post-receive
 $ chmod +x .git/hooks/post_receive
 """
@@ -45,7 +45,6 @@ def repo_path():
 def get_commit(new):
     commit = {}
     lines = git('--no-pager', 'show', '-s', '--quiet', new).split("\n")
-    print("got lines:", lines)
     commit['id'] = lines[0].strip().split()[1].strip()
     author_email = lines[1].strip().split(": ", 1)[1].strip()
     commit['author'] = author_email.split('<', 1)[0].strip()
