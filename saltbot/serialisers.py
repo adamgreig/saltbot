@@ -7,77 +7,88 @@ import json
 from .database import GitHubPush, SaltJob, SaltJobMinion, SaltMinionResult
 
 
-class Serialise:
-    def __init__(self, config):
-        self.cfg = config
-        self.url = self.cfg['web']['url']
+def serialise(obj):
+    if isinstance(obj, GitHubPush):
+        return serialise_githubpush(obj)
+    elif isinstance(obj, SaltJob):
+        return serialise_saltjob(obj)
+    elif isinstance(obj, SaltJobMinion):
+        return serialise_saltjobminion(obj)
+    elif isinstance(obj, SaltMinionResult):
+        return serialise_saltminionresult(obj)
+    else:
+        raise TypeError("Can't serialise type {}".format(type(obj)))
 
-    def __call__(self, obj):
-        if isinstance(obj, GitHubPush):
-            return self.serialise_githubpush(obj)
-        elif isinstance(obj, SaltJob):
-            return self.serialise_saltjob(obj)
-        elif isinstance(obj, SaltJobMinion):
-            return self.serialise_saltjobminion(obj)
-        elif isinstance(obj, SaltMinionResult):
-            return self.serialise_saltminionresult(obj)
 
-    def serialise_githubpush(self, obj):
-        r = {k: str(getattr(obj, k)) for k in obj._meta.get_field_names()}
-        r['job_url'] = "{}/jobs/{}".format(self.url, obj.jobs[0].jid)
-        r['job_jid'] = obj.jobs[0].jid
-        r['url'] = "{}/pushes/{}".format(self.url, obj.id)
-        r['id'] = obj.id
-        r['branch'] = obj.gitref.split("/")[2]
-        return r
+def serialise_fields(obj, skip=None):
+    """
+    Turn any string, integer or bool fields into native Python types,
+    returning a dict. Avoid any fields in 'skip'.
+    """
+    r = {}
+    for k in obj._meta.get_field_names():
+        if skip and k in skip:
+            continue
+        if isinstance(getattr(obj, k), type(None)):
+            r[k] = None
+            continue
+        for t in (str, int, bool):
+            if isinstance(getattr(obj, k), t):
+                r[k] = t(getattr(obj, k))
+                continue
+    return r
 
-    def serialise_saltjob(self, obj):
-        r = {k: str(getattr(obj, k)) for k in obj._meta.get_field_names()}
-        del r['github_push']
-        del r['id']
-        if hasattr(obj, 'no_errors'):
-            r['no_errors'] = bool(obj.no_errors)
-        if hasattr(obj, 'all_in'):
-            r['all_in'] = bool(obj.all_in)
-        ghp = obj.github_push
-        ghp_fields = ghp._meta.get_field_names()
-        r['push'] = {k: str(getattr(ghp, k)) for k in ghp_fields}
-        r['push']['branch'] = ghp.gitref.split("/")[2]
-        r['push']['id'] = ghp.id
-        r['push']['url'] = "{}/pushes/{}".format(self.url, ghp.id)
-        r['url'] = "{}/jobs/{}".format(self.url, obj.jid)
-        return r
 
-    def serialise_saltjobminion(self, obj):
-        jid = obj.job.jid
-        r = {
-            "minion": obj.minion,
-            "url": "{}/jobs/{}/minions/{}".format(self.url, jid, obj.id),
-            "id": obj.id,
-            "jid": jid,
-        }
-        if hasattr(obj, 'no_errors'):
-            if obj.no_errors is None:
-                r['no_errors'] = True
-            else:
-                r['no_errors'] = bool(obj.no_errors)
-        if hasattr(obj, 'num_results'):
-            r['num_results'] = int(obj.num_results)
-        if hasattr(obj, 'num_good') and obj.num_good is not None:
-            r['num_good'] = int(obj.num_good)
-        if hasattr(obj, 'num_results') and hasattr(obj, 'num_good'):
-            if obj.num_results is not None and obj.num_good is not None:
-                r['num_errors'] = int(obj.num_results) - int(obj.num_good)
-        return r
+def serialise_if_exists(obj, r, attr, t, default):
+    """
+    If hasattr(obj, attr) then if obj.attr is not None, r[attr]=t(obj.attr),
+    or if it is None, r[attr]=default. Won't be added to r if not in obj.
+    """
+    if hasattr(obj, attr):
+        if getattr(obj, attr) is not None:
+            r[attr] = t(getattr(obj, attr))
+        else:
+            r[attr] = default
 
-    def serialise_saltminionresult(self, obj):
-        r = {k: str(getattr(obj, k)) for k in obj._meta.get_field_names()}
-        del r['id']
 
-        r['minion'] = obj.minion.minion
-        r['result'] = obj.result
-        try:
-            r['output'] = json.loads(obj.output)
-        except ValueError:
-            r['output'] = None
-        return r
+def serialise_githubpush(obj):
+    r = serialise_fields(obj)
+    r['branch'] = obj.gitref.split("/")[2]
+    r['job_jid'] = obj.jobs[0].jid
+    r['id'] = obj.id
+    return r
+
+
+def serialise_saltjob(obj):
+    r = serialise_fields(obj, skip=['github_push', 'id'])
+    r['push'] = serialise_githubpush(obj.github_push)
+    serialise_if_exists(obj, r, 'all_in', bool, False)
+    serialise_if_exists(obj, r, 'no_errors', bool, True)
+    return r
+
+
+def serialise_saltjobminion(obj):
+    r = serialise_fields(obj, skip=['job', 'no_errors'])
+    r['jid'] = obj.job.jid
+    serialise_if_exists(obj, r, 'no_errors', bool, True)
+    serialise_if_exists(obj, r, 'num_results', int, 0)
+    serialise_if_exists(obj, r, 'num_good', int, 0)
+
+    if hasattr(obj, 'num_good'):
+        if obj.num_results is not None and obj.num_good is not None:
+            r['num_errors'] = int(obj.num_results) - int(obj.num_good)
+        else:
+            r['num_errors'] = 0
+
+    return r
+
+
+def serialise_saltminionresult(obj):
+    r = serialise_fields(obj, skip=['id', 'minion', 'output'])
+
+    try:
+        r['output'] = json.loads(obj.output)
+    except ValueError:
+        r['output'] = str(obj.output)
+
+    return r

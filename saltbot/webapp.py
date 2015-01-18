@@ -12,6 +12,8 @@ from tornado.ioloop import IOLoop
 from tornado.netutil import bind_unix_socket
 from peewee import fn, JOIN_LEFT_OUTER, SQL
 
+# This cute trick ensures that if someone calls imp.reload(webapp), we'll
+# reload our own local dependencies that may also have changed.
 try:
     reloading
 except NameError:
@@ -25,13 +27,14 @@ else:
 
 from .database import Database
 from .database import GitHubPush, SaltJob, SaltJobMinion, SaltMinionResult
-from .serialisers import Serialise
+from .serialisers import serialise
 
 app = Flask(__name__)
 logger = logging.getLogger("saltbot.http")
 
 
 def get_page(query):
+    """Given a query object, work out relevant pagination numbers"""
     page = int(request.args.get('page', 1))
     per_page = app.config['web']['per_page']
     pages = query.count() // per_page + 1
@@ -47,7 +50,7 @@ def bool_and(*args, **kwargs):
 
 
 def bool_sum(field):
-    """Count bools portably"""
+    """Count bools portably between sqlite/postgresql"""
     if app.config['database']['engine'] == "sqlite":
         return fn.Sum(SQL(field))
     elif app.config['database']['engine'] == "postgresql":
@@ -58,7 +61,6 @@ def bool_sum(field):
 def before_request():
     g._db = Database(app.config)
     g._db.connect()
-    g._serialise = Serialise(app.config)
 
 
 @app.teardown_appcontext
@@ -67,30 +69,24 @@ def teardown_appcontext(error=None):
         g._db.close()
 
 
-@app.route("/")
-def index():
-    logger.info("index()")
-    return "Hello World!"
-
-
-@app.route("/pushes/")
+@app.route("/api/pushes/")
 def pushes():
-    pushesq = GitHubPush.select().join(SaltJob)
+    pushesq = GitHubPush.select().join(SaltJob).order_by(GitHubPush.id.desc())
     page, pages, pp = get_page(pushesq)
-    pushes = [g._serialise(p) for p in pushesq.paginate(page, pp).iterator()]
+    pushes = [serialise(p) for p in pushesq.paginate(page, pp).iterator()]
     return jsonify(page=page, pages=pages, pushes=pushes)
 
 
-@app.route("/pushes/<int:pushid>")
+@app.route("/api/pushes/<int:pushid>")
 def push(pushid):
     try:
         push = GitHubPush.get(id=pushid)
     except GitHubPush.DoesNotExist:
         abort(404)
-    return jsonify(**g._serialise(push))
+    return jsonify(**serialise(push))
 
 
-@app.route("/jobs/")
+@app.route("/api/jobs/")
 def jobs():
     """
     Get all the SaltJobs we know about, and additionally:
@@ -111,68 +107,89 @@ def jobs():
     """
     job_fields = SQL(
         '"id", "when", "jid", "expr_form", "target", "github_push_id"')
+
     no_errors_int = bool_and(SaltMinionResult.result).alias('no_errors_int')
     no_errors = bool_and(SQL('no_errors_int')).alias('no_errors')
+
     got_results = (fn.Count(SaltMinionResult.id) > 0).alias('got_results')
     all_in = bool_and(SQL('got_results')).alias('all_in')
+
     subq = (SaltJob
             .select(SaltJob, no_errors_int, got_results)
             .join(SaltJobMinion, JOIN_LEFT_OUTER)
             .join(SaltMinionResult, JOIN_LEFT_OUTER)
             .group_by(SaltJob, SaltJobMinion))
+
     jobsq = (SaltJob
              .select(job_fields, no_errors, all_in)
              .from_(subq.alias("subq"))
              .order_by(SQL('"id" DESC'))
              .group_by(job_fields))
+
     page, pages, pp = get_page(jobsq)
-    jobs = [g._serialise(j) for j in jobsq.paginate(page, pp).iterator()]
+
+    jobs = [serialise(j) for j in jobsq.paginate(page, pp).iterator()]
+
     return jsonify(page=page, pages=pages, jobs=jobs)
 
 
-@app.route("/jobs/<jid>")
+@app.route("/api/jobs/<jid>")
 def job(jid):
+    """
+    Look up one specific Job
+    """
     try:
         job = SaltJob.get(jid=jid)
     except SaltJob.DoesNotExist:
         abort(404)
+
     no_errors = bool_and(SaltMinionResult.result).alias('no_errors')
     num_results = fn.Count(SaltMinionResult.id).alias('num_results')
     num_good = bool_sum('result').alias('num_good')
+
     minionsq = (SaltJobMinion
                 .select(SaltJobMinion, no_errors, num_good, num_results)
                 .join(SaltMinionResult, JOIN_LEFT_OUTER)
                 .group_by(SaltJobMinion)
+                .order_by(SaltJobMinion.id.desc())
                 .where(SaltJobMinion.job == job))
-    minions = [g._serialise(m) for m in minionsq.iterator()]
-    no_errors = all(m['no_errors'] for m in minions)
-    all_in = all(m['num_results'] > 0 for m in minions)
-    return jsonify(minions=minions, no_errors=no_errors, all_in=all_in,
-                   **g._serialise(job))
+    minions = [serialise(m) for m in minionsq.iterator()]
+
+    job.no_errors = all(m['no_errors'] for m in minions)
+    job.all_in = all(m['num_results'] > 0 for m in minions)
+
+    return jsonify(minions=minions, **serialise(job))
 
 
-@app.route("/jobs/<jid>/minions/<int:minion>")
+@app.route("/api/jobs/<jid>/minions/<int:minion>")
 def minionresults(jid, minion):
+    """
+    Look up one minion from a job, and get its results too.
+    """
     try:
         job = SaltJob.get(jid=jid)
         minion = SaltJobMinion.get(id=minion, job=job)
     except (SaltJob.DoesNotExist, SaltJobMinion.DoesNotExist):
         abort(404)
+
     resultsq = (SaltMinionResult
                 .select()
                 .join(SaltJobMinion)
+                .order_by(SaltMinionResult.id.desc())
                 .where(SaltMinionResult.minion == minion))
-    results = [g._serialise(r) for r in resultsq.iterator()]
+    results = [serialise(r) for r in resultsq.iterator()]
 
-    no_errors = all(r['result'] for r in results)
-    no_errors = bool(no_errors)
+    minion.no_errors = bool(all(r['result'] for r in results))
 
-    return jsonify(no_errors=no_errors, results=results,
-                   **g._serialise(minion))
+    return jsonify(results=results, **serialise(minion))
 
 
-@app.route("/webhook", methods=["POST"])
+@app.route("/api/webhook", methods=["POST"])
 def webhook():
+    """
+    Process receiving a webhook from GitHub.
+    Only supports push event notifications.
+    """
     logger.info("Webhook received")
 
     secret = app.config['github']['secret'].encode()
