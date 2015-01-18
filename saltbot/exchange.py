@@ -53,6 +53,8 @@ class Exchange:
                     self.handle_github_push(event)
                 except (KeyError, ValueError):
                     logger.exception("Error processing GitHub Push")
+            elif event_type == "irc_highstate":
+                self.handle_irc_highstate(event)
             elif event_type == "salt_started":
                 self.handle_salt_started(event)
             elif event_type == "salt_result":
@@ -84,6 +86,18 @@ class Exchange:
                 logger.info("Push was not to a configured branch")
         else:
             logger.info("Push was not to a configured repository")
+
+    def handle_irc_highstate(self, args):
+        logger.info("Handling IRC highstate request {}".format(args))
+        ghpush = GitHubPush(when=datetime.datetime.now(),
+                            pusher=args['who'], commit_msg="IRC Request",
+                            gitref="//{}".format(args['expr_form']),
+                            repo_name=args['target'], repo_url="#",
+                            commit_author=args['who'], commit_url="#",
+                            commit_ts=datetime.datetime.now(), commit_id="")
+        ghpush.save()
+        self.sltcq.put(("highstate", (args['target'], args['expr_form'],
+                                      args['wait_gitfs'], ghpush.id)))
 
     def handle_salt_started(self, args):
         jid, minions = args

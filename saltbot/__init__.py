@@ -36,6 +36,7 @@ class SaltBot:
             "quit": self.command_quit,
             "say": self.command_say,
             "reload": self.command_reload,
+            "highstate": self.command_highstate,
             "help": self.command_help,
         }
 
@@ -121,7 +122,7 @@ class SaltBot:
 
     def process_irc_command(self, who, message):
         logger.info("Processing IRC command <{}> {}".format(who, message))
-        if " " in message:
+        if len(message.split()) > 1:
             cmd, arg = message.split(None, 1)
             arg = arg.strip()
         else:
@@ -143,6 +144,7 @@ class SaltBot:
         self.irc_send(who, "  quit               Closes saltbot")
         self.irc_send(who, "  help               Display this message")
         self.irc_send(who, "  say <message>      Says <message> on IRC")
+        self.irc_send(who, "  highstate <target> [expr_form] [wait_gitfs]")
         self.irc_send(who, "  reload <module>    Reloads <module>, one of:")
         self.irc_send(who, "    {}".format(", ".join(modules)))
 
@@ -173,6 +175,31 @@ class SaltBot:
                 self.excp.terminate()
                 self.excp.join()
                 self.start_exc()
+
+    def command_highstate(self, who, arg):
+        if not arg or len(arg.split()) < 1:
+            self.irc_send(
+                who, "Usage: highstate <target> [expr_form] [wait_gitfs]")
+            logger.info("Invalid IRC highstate received")
+            return
+
+        args = arg.split()
+        event = {"who": who}
+        event["target"] = args[0]
+
+        if len(args) >= 2:
+            event["expr_form"] = args[1]
+        else:
+            event["expr_form"] = "glob"
+
+        if len(args) >= 3:
+            event["wait_gitfs"] = bool(args[2])
+        else:
+            event["wait_gitfs"] = False
+
+        logger.info("Sending IRC highstate request")
+        self.irc_send(who, "Highstate request received, processing")
+        self.webpq.put(("irc_highstate", event))
 
     def command_quit(self, who, arg):
         self.irc_send(who, "Shutting down.")
