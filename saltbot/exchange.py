@@ -102,8 +102,6 @@ class Exchange:
             self.ircmq.put(
                 ("pubmsg", "Salt JID {} finished, only {}/{} results"
                            .format(jid, m, n)))
-        self.ircmq.put(
-            ("pubmsg", "{}/jobs/{}".format(self.cfg['web']['url'], jid)))
 
 
 def run(config, ircmq, webpq, sltcq, sltrq):
