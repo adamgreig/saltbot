@@ -33,8 +33,6 @@ modules = ("config", "webapp", "ircbot", "exchange", "saltshaker")
 class SaltBot:
     def __init__(self):
         self.cfg = config.ConfigParser().load()
-        signal.signal(signal.SIGINT, self.signal)
-        signal.signal(signal.SIGTERM, self.signal)
         self.commands = {
             "quit": self.command_quit,
             "say": self.command_say,
@@ -45,6 +43,9 @@ class SaltBot:
 
     def run(self):
         logger.info("Saltbot starting up")
+
+        # Set signals to ignore when creating Queues
+        self.block_sigs()
 
         # IRC Message Queue, *->IRC
         self.ircmq = multiprocessing.Queue()
@@ -57,6 +58,9 @@ class SaltBot:
         # Salt Result Queue, salt->exchange
         self.sltrq = multiprocessing.Queue()
 
+        # Respond to signals again
+        self.unblock_sigs()
+
         self.start_exc()
         self.start_irc()
         self.start_slt()
@@ -64,13 +68,23 @@ class SaltBot:
 
         self.loop()
 
+    def block_sigs(self):
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
+        signal.signal(signal.SIGTERM, signal.SIG_IGN)
+
+    def unblock_sigs(self):
+        signal.signal(signal.SIGINT, self.signal)
+        signal.signal(signal.SIGTERM, self.signal)
+
     def start_exc(self):
         logger.info("Starting Exchange process")
         self.excp = multiprocessing.Process(
             target=exchange.run, name="Saltbot Exchange",
             args=(self.cfg, self.ircmq, self.webpq, self.sltcq, self.sltrq))
         self.excp.daemon = True
+        self.block_sigs()
         self.excp.start()
+        self.unblock_sigs()
 
     def start_irc(self):
         logger.info("Starting IRC process")
@@ -78,7 +92,9 @@ class SaltBot:
             target=ircbot.run, name="Saltbot IRC",
             args=(self.cfg, self.ircmq, self.irccq))
         self.ircp.daemon = True
+        self.block_sigs()
         self.ircp.start()
+        self.unblock_sigs()
 
     def start_slt(self):
         logger.info("Starting Salt process")
@@ -86,7 +102,9 @@ class SaltBot:
             target=saltshaker.run, name="Saltbot Salt",
             args=(self.cfg, self.sltcq, self.sltrq))
         self.sltp.daemon = True
+        self.block_sigs()
         self.sltp.start()
+        self.unblock_sigs()
 
     def start_web(self):
         logger.info("Starting web process")
@@ -94,7 +112,9 @@ class SaltBot:
             target=webapp.run, name="Saltbot Web",
             args=(self.cfg, self.webpq))
         self.webp.daemon = True
+        self.block_sigs()
         self.webp.start()
+        self.unblock_sigs()
 
     def loop(self):
         """
