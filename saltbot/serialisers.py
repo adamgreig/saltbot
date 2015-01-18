@@ -24,9 +24,11 @@ class Serialise:
 
     def serialise_githubpush(self, obj):
         r = {k: str(getattr(obj, k)) for k in obj._meta.get_field_names()}
-        r['job_urls'] = ["{}/jobs/{}".format(self.url, j.jid)
-                         for j in obj.jobs]
+        r['job_url'] = "{}/jobs/{}".format(self.url, obj.jobs[0].jid)
+        r['job_jid'] = obj.jobs[0].jid
         r['url'] = "{}/pushes/{}".format(self.url, obj.id)
+        r['id'] = obj.id
+        r['branch'] = obj.gitref.split("/")[2]
         return r
 
     def serialise_saltjob(self, obj):
@@ -37,7 +39,12 @@ class Serialise:
             r['no_errors'] = bool(obj.no_errors)
         if hasattr(obj, 'all_in'):
             r['all_in'] = bool(obj.all_in)
-        r['push_url'] = "{}/pushes/{}".format(self.url, obj.github_push.id)
+        ghp = obj.github_push
+        ghp_fields = ghp._meta.get_field_names()
+        r['push'] = {k: str(getattr(ghp, k)) for k in ghp_fields}
+        r['push']['branch'] = ghp.gitref.split("/")[2]
+        r['push']['id'] = ghp.id
+        r['push']['url'] = "{}/pushes/{}".format(self.url, ghp.id)
         r['url'] = "{}/jobs/{}".format(self.url, obj.jid)
         return r
 
@@ -46,6 +53,8 @@ class Serialise:
         r = {
             "minion": obj.minion,
             "url": "{}/jobs/{}/minions/{}".format(self.url, jid, obj.id),
+            "id": obj.id,
+            "jid": jid,
         }
         if hasattr(obj, 'no_errors'):
             if obj.no_errors is None:
@@ -53,15 +62,17 @@ class Serialise:
             else:
                 r['no_errors'] = bool(obj.no_errors)
         if hasattr(obj, 'num_results'):
-            r['num_results'] = obj.num_results
+            r['num_results'] = int(obj.num_results)
+        if hasattr(obj, 'num_good') and obj.num_good is not None:
+            r['num_good'] = int(obj.num_good)
+        if hasattr(obj, 'num_results') and hasattr(obj, 'num_good'):
+            if obj.num_results is not None and obj.num_good is not None:
+                r['num_errors'] = int(obj.num_results) - int(obj.num_good)
         return r
 
     def serialise_saltminionresult(self, obj):
         r = {k: str(getattr(obj, k)) for k in obj._meta.get_field_names()}
         del r['id']
-        del r['minion']
-        del r['result']
-        del r['output']
 
         r['minion'] = obj.minion.minion
         r['result'] = obj.result

@@ -46,6 +46,14 @@ def bool_and(*args, **kwargs):
         return fn.Bool_And(*args, **kwargs)
 
 
+def bool_sum(field):
+    """Count bools portably"""
+    if app.config['database']['engine'] == "sqlite":
+        return fn.Sum(SQL(field))
+    elif app.config['database']['engine'] == "postgresql":
+        return fn.Sum(SQL("{}::int".format(field)))
+
+
 @app.before_request
 def before_request():
     g._db = Database(app.config)
@@ -111,6 +119,7 @@ def jobs():
             .select(SaltJob, no_errors_int, got_results)
             .join(SaltJobMinion, JOIN_LEFT_OUTER)
             .join(SaltMinionResult, JOIN_LEFT_OUTER)
+            .order_by(SaltJob.when)
             .group_by(SaltJob, SaltJobMinion))
     jobsq = (SaltJob
              .select(job_fields, no_errors, all_in)
@@ -129,8 +138,9 @@ def job(jid):
         abort(404)
     no_errors = bool_and(SaltMinionResult.result).alias('no_errors')
     num_results = fn.Count(SaltMinionResult.id).alias('num_results')
+    num_good = bool_sum('result').alias('num_good')
     minionsq = (SaltJobMinion
-                .select(SaltJobMinion, no_errors, num_results)
+                .select(SaltJobMinion, no_errors, num_good, num_results)
                 .join(SaltMinionResult, JOIN_LEFT_OUTER)
                 .group_by(SaltJobMinion)
                 .where(SaltJobMinion.job == job))
@@ -157,7 +167,8 @@ def minionresults(jid, minion):
     no_errors = all(r['result'] for r in results)
     no_errors = bool(no_errors)
 
-    return jsonify(minion=minion.minion, no_errors=no_errors, results=results)
+    return jsonify(no_errors=no_errors, results=results,
+                   **g._serialise(minion))
 
 
 @app.route("/webhook", methods=["POST"])
