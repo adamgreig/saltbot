@@ -199,7 +199,7 @@ def webhook():
 
     secret = app.config['github']['secret'].encode()
     their_sig = request.headers.get('X-Hub-Signature')
-    my_sig = hmac.new(secret, request.data, hashlib.SHA1).hexdigest()
+    my_sig = hmac.new(secret, request.data, hashlib.sha1).hexdigest()
     if not hmac.compare_digest(their_sig, "sha1={}".format(my_sig)):
         logger.warn("Invalid signature received!")
         return "Invalid signature", 403
