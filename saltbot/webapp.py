@@ -162,10 +162,12 @@ def job(jid):
 
     no_errors = bool_and(SaltMinionResult.result).alias('no_errors')
     num_results = fn.Count(SaltMinionResult.id).alias('num_results')
+    num_changed = bool_sum('changed').alias('num_changed')
     num_good = bool_sum('result').alias('num_good')
 
     minionsq = (SaltJobMinion
-                .select(SaltJobMinion, no_errors, num_good, num_results)
+                .select(SaltJobMinion, no_errors,
+                        num_good, num_changed, num_results)
                 .join(SaltMinionResult, JOIN_LEFT_OUTER)
                 .group_by(SaltJobMinion)
                 .order_by(SaltJobMinion.id.desc())

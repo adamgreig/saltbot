@@ -10,7 +10,7 @@ PY2 = sys.version_info[0] == 2
 if not PY2:
     text_type = str
 else:
-    text_type = unicode
+    text_type = unicode  # noqa
 
 
 def serialise(obj):
@@ -84,6 +84,7 @@ def serialise_saltjobminion(obj):
     serialise_if_exists(obj, r, 'no_errors', bool, True)
     serialise_if_exists(obj, r, 'num_results', int, 0)
     serialise_if_exists(obj, r, 'num_good', int, 0)
+    serialise_if_exists(obj, r, 'num_changed', int, 0)
 
     if hasattr(obj, 'num_good'):
         if obj.num_results is not None and obj.num_good is not None:

@@ -27,6 +27,10 @@ Currently runs on Python 2.7, 3.3 and 3.4.
     saltbot$ cp saltbot.yml.sample saltbot.yml
     saltbot$ vi saltbot.yml
 
+To use the `wait_gitfs` feature, in your Salt master configuration set:
+
+    fileserver_events: True
+
 ## Usage
 
     saltbot$ saltbot
