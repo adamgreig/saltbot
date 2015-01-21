@@ -13,6 +13,7 @@ An IRC bot for [Salt](http://www.saltstack.com/community/) deployments.
  * Returns status to IRC
  * Live updating web application to view current status and historic jobs
  * View full state output for every minion, highlighted by status
+ * Ship it!
 
 ## Install
 
