@@ -104,6 +104,7 @@ class SaltShaker:
         dbresult = SaltMinionResult(minion=dbminion, output=json.dumps(msg))
         dbresult.key_id = "Minion Error"
         dbresult.result = False
+        dbresult.save()
 
     def wait_gitfs(self):
         """
