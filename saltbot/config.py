@@ -36,7 +36,8 @@ class ConfigParser:
         return self.cfg
 
     def check_config(self):
-        for sec in 'web', 'database', 'irc', 'logs', 'github', 'repos':
+        for sec in ['web', 'database', 'irc', 'logs', 'github', 'commands',
+                    'repos']:
             if sec not in self.cfg:
                 raise ValueError("Missing {} section in config".format(sec))
         self.check_web_config()
@@ -44,9 +45,10 @@ class ConfigParser:
         self.check_irc_config()
         self.check_github_config()
         self.check_logs_config()
+        self.check_commands_config()
         self.check_repos_config()
 
-    def check_web_config(self): 
+    def check_web_config(self):
         web = self.cfg['web']
         if 'url' not in web:
             raise ValueError("Must specify web.url in config")
@@ -64,7 +66,7 @@ class ConfigParser:
                 ('host' in web and 'port' in web)):
             raise ValueError("Missing socket/mode or host/port in config")
 
-    def check_db_config(self): 
+    def check_db_config(self):
         db = self.cfg['database']
         engine = db.get('engine', None)
         if engine == "sqlite":
@@ -100,20 +102,35 @@ class ConfigParser:
         if 'file' not in logs:
             self.cfg['logs']['file'] = None
         if 'email' in logs:
-            for field in 'to', 'from', 'server':
-                if field not in logs['email']:
-                    raise ValueError("Missing required logs.email.{} config"
-                                     .format(field))
-            to_list = isinstance(logs['email']['to'], list)
-            to_str = isinstance(logs['email']['to'], str)
-            if not (to_list or to_str):
-                raise ValueError("logs.email.to must be a list or string")
-            if to_str:
-                self.cfg['logs']['email']['to'] = [logs['email']['to']]
-            if not isinstance(logs['email']['from'], str):
-                raise ValueError("logs.email.from must be a string")
-            if not isinstance(logs['email']['server'], str):
-                raise ValueError("logs.email.server must be a string")
+            self.check_logs_email_config(logs['email'])
+
+    def check_logs_email_config(self, emails):
+        for field in 'to', 'from', 'server':
+            if field not in emails:
+                raise ValueError("Missing required logs.email.{} config"
+                                 .format(field))
+        to_list = isinstance(emails['to'], list)
+        to_str = isinstance(emails['to'], str)
+        if not (to_list or to_str):
+            raise ValueError("logs.email.to must be a list or string")
+        if to_str:
+            self.cfg['logs']['email']['to'] = [emails['to']]
+        if not isinstance(emails['from'], str):
+            raise ValueError("logs.email.from must be a string")
+        if not isinstance(emails['server'], str):
+            raise ValueError("logs.email.server must be a string")
+
+    def check_commands_config(self):
+        cmds = self.cfg['commands']
+        if 'ship' not in cmds:
+            raise ValueError("Missing commands.ship")
+        ship = cmds['ship']
+        if 'it' not in ship:
+            raise ValueError("Missing commands.ship.it")
+        if 'target' not in ship:
+            raise ValueError("Missing commands.ship.target")
+        if 'expr_form' not in ship:
+            self.cfg['commands']['ship']['expr_form'] = 'glob'
 
     def check_repos_config(self):
         repos = self.cfg['repos']

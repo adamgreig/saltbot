@@ -53,6 +53,17 @@ logs:
     from: saltbot@example.com
     server: localhost
 
+# Command configuration
+commands:
+  # Ship command
+  # The 'it' key gives the full target when the command is "ship it",
+  # the 'target' key gives the target template, use {} to indicate the
+  # position of the target supplied by the user.
+  # You can set expr_form which is used for all ship commands, default glob.
+  ship:
+    it: "*.vm.example.com"
+    target: "{}.vm.example.com"
+    expr_form: glob
 
 # Repository configuration.
 # 

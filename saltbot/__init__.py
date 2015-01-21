@@ -38,6 +38,7 @@ class SaltBot:
             "say": self.command_say,
             "reload": self.command_reload,
             "highstate": self.command_highstate,
+            "ship": self.command_ship,
             "help": self.command_help,
         }
 
@@ -190,9 +191,10 @@ class SaltBot:
 
     def command_help(self, who, arg):
         self.irc_send(who, "Available commands:")
-        self.irc_send(who, "  quit               Closes saltbot")
-        self.irc_send(who, "  help               Display this message")
-        self.irc_send(who, "  say <message>      Says <message> on IRC")
+        self.irc_send(who, "  quit                 Closes saltbot")
+        self.irc_send(who, "  help                 Display this message")
+        self.irc_send(who, "  say <message>        Says <message> on IRC")
+        self.irc_send(who, "  ship <'it'|target>   Ship it!")
         self.irc_send(who, "  highstate <target> [expr_form] [wait_gitfs]")
         self.irc_send(who, "  reload <module>    Reloads <module>, one of:")
         self.irc_send(who, "    {}".format(", ".join(modules)))
@@ -233,8 +235,7 @@ class SaltBot:
             return
 
         args = arg.split()
-        event = {"who": who}
-        event["target"] = args[0]
+        event = {"who": who, "target": args[0]}
 
         if len(args) >= 2:
             event["expr_form"] = args[1]
@@ -248,6 +249,24 @@ class SaltBot:
 
         logger.info("Sending IRC highstate request")
         self.irc_send(who, "Highstate request received, processing")
+        self.webpq.put(("irc_highstate", event))
+
+    def command_ship(self, who, arg):
+        if not arg or len(arg.split()) != 1:
+            self.irc_send(who, "Invalid ship command. Use: ship <it|target>")
+            logger.info("Invalid IRC ship command received")
+            return
+
+        if arg == "it":
+            target = self.cfg['commands']['ship']['it']
+        else:
+            target = self.cfg['commands']['ship']['target'].format(arg)
+
+        event = {"who": who, "target": target, "wait_gitfs": False}
+        event['expr_form'] = self.cfg['commands']['ship']['expr_form']
+        logger.info("Sending highstate request via IRC ship")
+        self.irc_send(
+            who, "Ship request received, highstating {}".format(target))
         self.webpq.put(("irc_highstate", event))
 
     def command_quit(self, who, arg):
