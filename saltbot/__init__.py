@@ -187,7 +187,7 @@ class SaltBot:
             self.irc_send(who, "Unknown command")
 
     def irc_send(self, who, msg):
-        self.ircmq.put(("privmsg", (who, msg)))
+        self.ircmq.put(("pubmsg", "{}: {}".format(who, msg)))
 
     def command_help(self, who, arg):
         self.irc_send(who, "Available commands:")
