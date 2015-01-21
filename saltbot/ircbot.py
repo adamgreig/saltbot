@@ -33,7 +33,8 @@ class IRCBot(irc.bot.SingleServerIRCBot):
 
     def on_nicknameinuse(self, c, e):
         logger.info("Nickname in use, trying alternative")
-        c.nick(c.get_nickname() + "_")
+        self.nick += "_"
+        c.nick(self.nick)
 
     def on_welcome(self, c, e):
         logger.info("Welcome message received")
@@ -53,8 +54,16 @@ class IRCBot(irc.bot.SingleServerIRCBot):
         logger.info("PRIVMSG received {} {}".format(e.source, e.arguments[0]))
         sender = e.source.split("!")[0]
         if sender in self.config['irc']['owners']:
-            # Handle commands from owners
             self.check_ident_and_cmd(sender, e.arguments[0])
+
+    def on_pubmsg(self, c, e):
+        a = e.arguments[0].split(": ", 1)
+        if len(a) > 1 and a[0] == self.nick:
+            logger.info(
+                "PUBMSG received {} {}".format(e.source, e.arguments[0]))
+            sender = e.source.split("!")[0]
+            if sender in self.config['irc']['owners']:
+                self.check_ident_and_cmd(sender, a[1])
 
     def on_privnotice(self, c, e):
         # Strip non-printable characters from log output
