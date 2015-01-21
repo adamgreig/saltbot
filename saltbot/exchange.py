@@ -123,4 +123,8 @@ class Exchange:
 
 def run(config, ircmq, webpq, sltcq, sltrq):
     exchange = Exchange(config, ircmq, webpq, sltcq, sltrq)
-    exchange.run()
+    try:
+        exchange.run()
+    except Exception:
+        logger.exception("Unhandled exception")
+        raise

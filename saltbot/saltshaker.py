@@ -174,4 +174,8 @@ class SaltShaker:
 
 def run(config, sltcq, sltrq):
     saltshaker = SaltShaker(config, sltcq, sltrq)
-    saltshaker.run()
+    try:
+        saltshaker.run()
+    except Exception:
+        logger.exception("Unhandled exception")
+        raise

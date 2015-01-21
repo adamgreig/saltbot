@@ -118,4 +118,8 @@ class IRCBot(irc.bot.SingleServerIRCBot):
 
 def run(config, ircmq, irccq):
     bot = IRCBot(config, ircmq, irccq)
-    bot.start()
+    try:
+        bot.start()
+    except Exception:
+        logger.exception("Unhandled exception")
+        raise
