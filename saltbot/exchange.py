@@ -74,12 +74,17 @@ class Exchange:
                 wait_gitfs = repo_cfg[branch].get('wait_gitfs', False)
                 logger.info("Target (expr_form={}, wait_gitfs={}): {}"
                             .format(expr_form, wait_gitfs, target))
+                commitmsg = push['commit_msg'][:77]
+                if len(push['commit_msg']) > 77:
+                    commitmsg += "..."
                 self.ircmq.put(
-                    ("pubmsg", "Push to {} {} by {}, highstating {} {}{}"
+                    ("pubmsg", "Push to {} {} by {}: {}"
                                .format(push['repo_name'], branch,
-                                       push['pusher'], expr_form,
-                                       target, " (waiting for gitfs)"
-                                       if wait_gitfs else "")))
+                                       push['pusher'], commitmsg)))
+                self.ircmq.put(
+                    ("pubmsg", "Going to highstate {} {}{}".format(
+                        expr_form, target,
+                        " (waiting for gitfs)" if wait_gitfs else "")))
                 self.sltcq.put(("highstate", (target, expr_form,
                                               wait_gitfs, ghpush.id)))
             else:
