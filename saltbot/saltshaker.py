@@ -100,6 +100,11 @@ class SaltShaker:
             dbresult.result = False
         dbresult.save()
 
+    def store_minion_error(self, dbminion, msg):
+        dbresult = SaltMinionResult(minion=dbminion, output=json.dumps(msg))
+        dbresult.key_id = "Minion Error"
+        dbresult.result = False
+
     def wait_gitfs(self):
         """
         Watch Salt events, waiting for a gitfs refresh, then return.
@@ -161,6 +166,16 @@ class SaltShaker:
                     continue
                 logger.info("Processing Salt results for {}".format(minion))
                 minions_heard_from += 1
+
+                # Handle errors returned from the minion
+                if isinstance(result['ret'], list):
+                    logger.warning("Got an error list for minion result:")
+                    logger.warning(str(result['ret']))
+                    for msg in result['ret']:
+                        self.store_minion_error(dbminion, msg)
+                    continue
+
+                # Handle actual state results returned from the minion
                 for key, val in result['ret'].items():
                     self.store_state_result(dbminion, key, val)
                     if 'result' in val and not val['result']:
