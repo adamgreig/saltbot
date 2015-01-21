@@ -48,18 +48,20 @@ def make_jid():
     return datetime.datetime.now().strftime("%Y%m%d%H%M%S%f")
 
 
+class Event:
+    def get_event_noblock(self):
+        time.sleep(1)
+        return {"tag": "salt/fileserver/gitfs/update"}
+
+
 class client:
     class zmq:
         class ZMQError:
             pass
 
     class LocalClient:
-        class Event:
-            def get_event_noblock(self):
-                time.sleep(1)
-                return {"tag": "salt/fileserver/gitfs/update"}
         event = Event()
-        opts = {}
+        opts = {"transport": None, "sock_dir": "/tmp/"}
 
         def run_job(self, tgt, fun, arg=(), expr_form='glob', ret='',
                     timeout=None, jid='', kwarg=None, **kwargs):
@@ -70,3 +72,9 @@ class client:
             for minion in minions:
                 n = random.randrange(5, 15)
                 yield {minion: {'ret': random_results(n), 'out': 'highstate'}}
+
+
+class utils:
+    class event:
+        def get_event(*args, **kwargs):
+            return Event()

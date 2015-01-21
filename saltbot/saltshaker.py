@@ -116,7 +116,10 @@ class SaltShaker:
         Times out after 5 minutes too.
         """
         start = datetime.datetime.now()
-        event = self.client.event
+        event = salt.utils.event.get_event(
+            'master', self.client.opts['sock_dir'],
+            self.client.opts['transport'], opts=self.client.opts,
+            listen=(not self.client.opts.get('__worker', False)))
         tag = "salt/fileserver/gitfs/update"
         logger.info("Waiting for gitfs refresh")
 
@@ -147,6 +150,9 @@ class SaltShaker:
                 if raw and raw.get('tag', '') == tag:
                     logger.info("Saw gitfs update event")
                     break
+
+        # Make sure this is deleted as otherwise we'll leak event listeners
+        del event
 
     def highstate(self, target, expr, wait_gitfs, gh_push_id):
         if wait_gitfs:
