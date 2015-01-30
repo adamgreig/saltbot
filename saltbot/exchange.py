@@ -115,7 +115,8 @@ class Exchange:
             ("pubmsg", "{}/jobs/{}".format(self.cfg['web']['url'], jid)))
 
     def handle_salt_error(self, args):
-        self.ircmq.put("pubmsg", "Error processing Salt job: {}".format(args))
+        self.ircmq.put(
+            ("pubmsg", "Error processing Salt job: {}".format(args)))
 
     def handle_salt_result(self, args):
         jid, all_ok, m, n = args
