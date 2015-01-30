@@ -36,6 +36,10 @@ except ImportError:
 from .database import Database, SaltJob, SaltJobMinion, SaltMinionResult
 
 
+class SaltShakerException(Exception):
+    pass
+
+
 class SaltShaker:
     def __init__(self, config, sltcq, sltrq):
         self.cfg = config
@@ -55,10 +59,15 @@ class SaltShaker:
             else:
                 logger.info("Received command {} {}".format(cmd, arg))
                 if cmd == "highstate":
-                    self.highstate(*arg)
+                    try:
+                        self.highstate(*arg)
+                    except SaltShakerException as e:
+                        self.sltrq.put(("salt_error", str(e)))
 
     def start_salt(self, tgt, expr):
         job = self.client.run_job(tgt, 'state.highstate', expr_form=expr)
+        if not job:
+            raise SaltShakerException("Salt job not started, check targets")
         jid, minions = job['jid'], job['minions']
         iter_returns = self.client.get_iter_returns(
             jid, minions, tgt=tgt, tgt_type=expr)

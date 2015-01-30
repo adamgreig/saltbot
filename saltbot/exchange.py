@@ -59,6 +59,8 @@ class Exchange:
                 self.handle_salt_started(event)
             elif event_type == "salt_result":
                 self.handle_salt_result(event)
+            elif event_type == "salt_error":
+                self.handle_salt_error(event)
 
     def handle_github_push(self, push):
         logger.info("Saving GitHub Push to database")
@@ -111,6 +113,9 @@ class Exchange:
                        .format(jid, ', '.join(minions))))
         self.ircmq.put(
             ("pubmsg", "{}/jobs/{}".format(self.cfg['web']['url'], jid)))
+
+    def handle_salt_error(self, args):
+        self.ircmq.put("pubmsg", "Error processing Salt job: {}".format(args))
 
     def handle_salt_result(self, args):
         jid, all_ok, m, n = args
