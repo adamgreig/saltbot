@@ -249,7 +249,7 @@ def run(config, webpq):
     logger.info("App starting up")
     app.config.update(config)
     app.config['webpq'] = webpq
-    server = HTTPServer(WSGIContainer(app))
+    server = HTTPServer(WSGIContainer(app), xheaders=True)
     if config['web'].get('socket'):
         mode = int(str(config['web'].get('mode', 777)), 8)
         socket = bind_unix_socket(config['web'].get('socket'), mode=mode)
