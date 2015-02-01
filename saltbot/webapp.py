@@ -222,17 +222,22 @@ def webhook():
     if request.headers.get('X-GitHub-Event') == 'push':
         event = request.get_json()
         push = {}
-        push['gitref'] = event['ref']
-        push['repo_name'] = event['repository']['full_name']
-        push['repo_url'] = event['repository']['url']
-        push['commit_id'] = event['head_commit']['id']
-        push['commit_msg'] = event['head_commit']['message']
-        push['commit_ts'] = event['head_commit']['timestamp']
-        push['commit_url'] = event['head_commit']['url']
-        push['commit_author'] = event['head_commit']['author']['username']
-        push['pusher'] = event['pusher']['name']
-        logger.info("Details: {}".format(push))
-        app.config['webpq'].put(("github_push", push))
+        try:
+            push['gitref'] = event['ref']
+            push['repo_name'] = event['repository']['full_name']
+            push['repo_url'] = event['repository']['url']
+            push['commit_id'] = event['head_commit']['id']
+            push['commit_msg'] = event['head_commit']['message']
+            push['commit_ts'] = event['head_commit']['timestamp']
+            push['commit_url'] = event['head_commit']['url']
+            push['commit_author'] = event['head_commit']['author']['username']
+            push['pusher'] = event['pusher']['name']
+        except (KeyError, TypeError):
+            logger.warning("Could not extract event from push, skipping")
+            logger.warning(str(event))
+        else:
+            logger.info("Details: {}".format(push))
+            app.config['webpq'].put(("github_push", push))
 
     if request.headers.get('X-GitHub-Event') == 'ping':
         logger.info("Received GitHub ping")
