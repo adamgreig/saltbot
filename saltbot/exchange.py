@@ -76,7 +76,7 @@ class Exchange:
                 wait_gitfs = repo_cfg[branch].get('wait_gitfs', False)
                 logger.info("Target (expr_form={}, wait_gitfs={}): {}"
                             .format(expr_form, wait_gitfs, target))
-                commitmsg = push['commit_msg'][:77]
+                commitmsg = push['commit_msg'].split("\n")[0][:77]
                 if len(push['commit_msg']) > 77:
                     commitmsg += "..."
                 self.ircmq.put(
