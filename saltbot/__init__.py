@@ -301,7 +301,7 @@ def createtables():
     db = database.Database(saltbot.cfg)
     try:
         db.create_tables()
-    except peewee.OperationalError as e:
+    except (peewee.OperationalError, peewee.ProgrammingError) as e:
         print("Received error, ignoring:", e)
 
 
