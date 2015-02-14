@@ -41,17 +41,36 @@ github:
   secret: hunter2
 
 # Log configuration.
+# * 'levels' can contain any of stderr, file, email and syslog, and specify any
+#   of NONE, DEBUG, INFO, WARNING, ERROR, CRITICAL
+#   If NONE or not specified then that output is disabled.
+# * 'file' is a filename to log to (at the specified level).
+# * 'email' contains a 'to' string/list, 'from' string and 'server' string for
+#   sending emails. All are mandatory if you have email outputs.
+# * 'syslog' contains address, port, facility, socktype settings. All optional.
+#   * address is the syslog address, e.g. localhost (default)
+#   * port is the syslog port, e.g. 514 (default)
+#   * address is syslog server: ["localhost", 514] or "/dev/log" (default) etc
+#   * facility may be any of the LOG_* constants in the logging.handlers.syslog
+#     module, e.g. LOG_USER (default) or LOG_LOCAL0 etc.
+#   * socktype may be 'UDP' (default) or 'TCP' which map to socket.SOCK_DGRAM
+#     and socket.SOCK_STREAM respectively.
 logs:
   levels:
     stderr: "INFO"
     file: "NONE"
     email: "NONE"
+    syslog: "NONE"
   file: saltbot.log
   email:
     to:
       - saltbot@example.com
     from: saltbot@example.com
     server: localhost
+  syslog:
+    address: "/dev/log"
+    facility: LOG_USER
+    socktype: UDP
 
 # Command configuration
 commands:

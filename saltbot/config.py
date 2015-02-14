@@ -3,7 +3,9 @@
 # Released under the MIT license. See LICENSE file for details.
 
 import sys
+import socket
 import logging
+import logging.handlers
 
 import yaml
 
@@ -101,6 +103,8 @@ class ConfigParser:
             raise ValueError("Missing required logs.levels config")
         if 'file' not in logs:
             self.cfg['logs']['file'] = None
+        if 'syslog' not in logs:
+            self.cfg['logs']['syslog'] = {}
         if 'email' in logs:
             self.check_logs_email_config(logs['email'])
 
@@ -152,6 +156,7 @@ class ConfigParser:
         stderr_level = str2level(levels.get('stderr', "NONE"))
         file_level = str2level(levels.get('file', "NONE"))
         email_level = str2level(levels.get('email', "NONE"))
+        syslog_level = str2level(levels.get('syslog', "NONE"))
 
         if stderr_level is not None:
             stderr_handler = logging.StreamHandler()
@@ -175,5 +180,28 @@ class ConfigParser:
             email_handler.setLevel(email_level)
             email_handler.setFormatter(logging.Formatter(_format_email))
             root.addHandler(email_handler)
+
+        if syslog_level is not None:
+            addr = self.cfg['logs']['syslog'].get('address', '/dev/log')
+            facility = self.cfg['logs']['syslog'].get('facility', 'LOG_USER')
+            socktype = self.cfg['logs']['syslog'].get('socktype', 'UDP')
+
+            try:
+                facility = getattr(logging.handlers.SysLogHandler, facility)
+            except AttributeError:
+                raise ValueError("Unknown syslog facility {}".format(facility))
+
+            if socktype == "UDP":
+                socktype = socket.SOCK_DGRAM
+            elif socktype == "TCP":
+                socktype = socket.SOCK_STREAM
+            else:
+                raise ValueError("Unknown syslog socktype {}".format(socktype))
+
+            syslog_handler = logging.handlers.SysLogHandler(
+                address=addr, facility=facility, socktype=socktype)
+            syslog_handler.setLevel(syslog_level)
+            syslog_handler.setFormatter(logging.Formatter(_format_string))
+            root.addHandler(syslog_handler)
 
         logger.info("Logging initialised")
