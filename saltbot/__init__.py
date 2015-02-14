@@ -71,10 +71,12 @@ class SaltBot:
 
     def block_sigs(self):
         signal.signal(signal.SIGINT, signal.SIG_DFL)
+        signal.signal(signal.SIGHUP, signal.SIG_IGN)
         signal.signal(signal.SIGTERM, signal.SIG_DFL)
 
     def unblock_sigs(self):
         signal.signal(signal.SIGINT, self.signal)
+        signal.signal(signal.SIGHUP, self.signal)
         signal.signal(signal.SIGTERM, self.signal)
 
     def start_exc(self):
@@ -149,8 +151,15 @@ class SaltBot:
             time.sleep(1)
 
     def signal(self, num, frame):
-        logger.warn("Terminating due to signal")
-        self.terminate()
+        if num in (signal.SIGINT, signal.SIGTERM):
+            logger.warn("Terminating due to signal")
+            self.terminate()
+        elif num == signal.SIGHUP:
+            logger.warn("SIGHUP received, reloading config")
+            self.command_reload("SIGHUP", "config")
+            self.irc_send("SIGHUP received", "consider reloading modules")
+        else:
+            logger.warn("Unknown signal received: {}".format(num))
 
     def terminate(self):
         logger.warn("Shutting down child processes")
