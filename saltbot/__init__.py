@@ -67,7 +67,8 @@ class SaltBot:
         self.start_slt()
         self.start_web()
 
-        self.loop()
+        while True:
+            self.main()
 
     def block_sigs(self):
         signal.signal(signal.SIGINT, signal.SIG_DFL)
@@ -119,12 +120,14 @@ class SaltBot:
         self.webp.start()
         self.unblock_sigs()
 
-    def loop(self):
+    def main(self):
         """
         Check all child processes are still alive and restart if required.
         Handle incoming commands from IRC.
+
+        This runs in a loop from run().
         """
-        while True:
+        try:
             # Restart dead child processes
             if not self.ircp.is_alive():
                 logger.warn("IRC process died, restarting")
@@ -149,6 +152,9 @@ class SaltBot:
                     self.process_irc_command(*args)
 
             time.sleep(1)
+        except Exception:
+            logger.exception("Unhandled exception")
+            raise
 
     def signal(self, num, frame):
         if num in (signal.SIGINT, signal.SIGTERM):

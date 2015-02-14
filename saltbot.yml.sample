@@ -41,8 +41,8 @@ github:
   secret: hunter2
 
 # Log configuration.
-# * 'levels' can contain any of stderr, file, email and syslog, and specify any
-#   of NONE, DEBUG, INFO, WARNING, ERROR, CRITICAL
+# * 'levels' can contain any of stderr, file, email, syslog, and sentry,
+#    and specify any of NONE, DEBUG, INFO, WARNING, ERROR, CRITICAL
 #   If NONE or not specified then that output is disabled.
 # * 'file' is a filename to log to (at the specified level).
 # * 'email' contains a 'to' string/list, 'from' string and 'server' string for
@@ -55,12 +55,16 @@ github:
 #     module, e.g. LOG_USER (default) or LOG_LOCAL0 etc.
 #   * socktype may be 'UDP' (default) or 'TCP' which map to socket.SOCK_DGRAM
 #     and socket.SOCK_STREAM respectively.
+# * 'sentry' is a sentry configuration, which must be a dict including
+#   at least the dsn and optionally other keys. It is mandatory if you enable
+#   Sentry output, and the Raven client must also be installed.
 logs:
   levels:
     stderr: "INFO"
     file: "NONE"
     email: "NONE"
     syslog: "NONE"
+    sentry: "NONE"
   file: saltbot.log
   email:
     to:
@@ -71,6 +75,9 @@ logs:
     address: "/dev/log"
     facility: LOG_USER
     socktype: UDP
+  sentry:
+    dsn: "http://public:secret@example.com/1"
+    processors: ["raven.processors.SanitizePasswordsProcessor"]
 
 # Command configuration
 commands:

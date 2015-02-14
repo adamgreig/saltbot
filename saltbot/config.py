@@ -157,51 +157,90 @@ class ConfigParser:
         file_level = str2level(levels.get('file', "NONE"))
         email_level = str2level(levels.get('email', "NONE"))
         syslog_level = str2level(levels.get('syslog', "NONE"))
+        sentry_level = str2level(levels.get('sentry', "NONE"))
 
         if stderr_level is not None:
-            stderr_handler = logging.StreamHandler()
-            stderr_handler.setFormatter(logging.Formatter(_format_string))
-            stderr_handler.setLevel(stderr_level)
-            root.addHandler(stderr_handler)
+            self.configure_stderr_logging(root, stderr_level)
 
         if file_level is not None:
-            file_name = self.cfg['logs']['file']
-            file_handler = logging.handlers.WatchedFileHandler(file_name)
-            file_handler.setFormatter(logging.Formatter(_format_string))
-            file_handler.setLevel(file_level)
-            root.addHandler(file_handler)
+            self.configure_file_logging(root, file_level)
 
         if email_level is not None:
-            email_to = self.cfg['logs']['email']['to']
-            email_from = self.cfg['logs']['email']['from']
-            email_server = self.cfg['logs']['email']['server']
-            email_handler = logging.handlers.SMTPHandler(
-                email_server, email_from, email_to, "Saltbot")
-            email_handler.setLevel(email_level)
-            email_handler.setFormatter(logging.Formatter(_format_email))
-            root.addHandler(email_handler)
+            self.configure_email_logging(root, email_level)
 
         if syslog_level is not None:
-            addr = self.cfg['logs']['syslog'].get('address', '/dev/log')
-            facility = self.cfg['logs']['syslog'].get('facility', 'LOG_USER')
-            socktype = self.cfg['logs']['syslog'].get('socktype', 'UDP')
+            self.configure_syslog_logging(root, syslog_level)
 
-            try:
-                facility = getattr(logging.handlers.SysLogHandler, facility)
-            except AttributeError:
-                raise ValueError("Unknown syslog facility {}".format(facility))
-
-            if socktype == "UDP":
-                socktype = socket.SOCK_DGRAM
-            elif socktype == "TCP":
-                socktype = socket.SOCK_STREAM
-            else:
-                raise ValueError("Unknown syslog socktype {}".format(socktype))
-
-            syslog_handler = logging.handlers.SysLogHandler(
-                address=addr, facility=facility, socktype=socktype)
-            syslog_handler.setLevel(syslog_level)
-            syslog_handler.setFormatter(logging.Formatter(_format_string))
-            root.addHandler(syslog_handler)
+        if sentry_level is not None:
+            self.configure_sentry_logging(root, sentry_level)
 
         logger.info("Logging initialised")
+
+    def configure_stderr_logging(self, root, stderr_level):
+        stderr_handler = logging.StreamHandler()
+        stderr_handler.setFormatter(logging.Formatter(_format_string))
+        stderr_handler.setLevel(stderr_level)
+        root.addHandler(stderr_handler)
+
+    def configure_file_logging(self, root, file_level):
+        file_name = self.cfg['logs']['file']
+        file_handler = logging.handlers.WatchedFileHandler(file_name)
+        file_handler.setFormatter(logging.Formatter(_format_string))
+        file_handler.setLevel(file_level)
+        root.addHandler(file_handler)
+
+    def configure_email_logging(self, root, email_level):
+        email_to = self.cfg['logs']['email']['to']
+        email_from = self.cfg['logs']['email']['from']
+        email_server = self.cfg['logs']['email']['server']
+        email_handler = logging.handlers.SMTPHandler(
+            email_server, email_from, email_to, "Saltbot")
+        email_handler.setLevel(email_level)
+        email_handler.setFormatter(logging.Formatter(_format_email))
+        root.addHandler(email_handler)
+
+    def configure_syslog_logging(self, root, syslog_level):
+        addr = self.cfg['logs']['syslog'].get('address', '/dev/log')
+        facility = self.cfg['logs']['syslog'].get('facility', 'LOG_USER')
+        socktype = self.cfg['logs']['syslog'].get('socktype', 'UDP')
+
+        try:
+            facility = getattr(logging.handlers.SysLogHandler, facility)
+        except AttributeError:
+            raise ValueError("Unknown syslog facility {}".format(facility))
+
+        if socktype == "UDP":
+            socktype = socket.SOCK_DGRAM
+        elif socktype == "TCP":
+            socktype = socket.SOCK_STREAM
+        else:
+            raise ValueError("Unknown syslog socktype {}".format(socktype))
+
+        syslog_handler = logging.handlers.SysLogHandler(
+            address=addr, facility=facility, socktype=socktype)
+        syslog_handler.setLevel(syslog_level)
+        syslog_handler.setFormatter(logging.Formatter(_format_string))
+        root.addHandler(syslog_handler)
+
+    def configure_sentry_logging(self, root, sentry_level):
+        if 'sentry' not in self.cfg['logs']:
+            raise ValueError("Sentry logging specified but not configured")
+        sentry_cfg = self.cfg['logs']['sentry']
+        if 'release' not in sentry_cfg:
+            try:
+                import pkg_resources
+                ver = pkg_resources.get_distribution("saltbot").version
+                sentry_cfg['release'] = str(ver)
+            except ImportError:
+                pass
+        try:
+            from raven import Client as RavenClient
+            from raven.handlers.logging import SentryHandler
+        except ImportError:
+            raise ValueError(
+                "Sentry logging specified but Raven not installed")
+
+        client = RavenClient(**sentry_cfg)
+        sentry_handler = SentryHandler(client)
+        sentry_handler.setLevel(sentry_level)
+        root.addHandler(sentry_handler)

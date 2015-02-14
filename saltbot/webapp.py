@@ -7,6 +7,7 @@ import hashlib
 import logging
 
 from flask import Flask, request, g, jsonify, abort
+from werkzeug.contrib.fixers import ProxyFix
 from tornado.wsgi import WSGIContainer
 from tornado.httpserver import HTTPServer
 from tornado.ioloop import IOLoop
@@ -35,6 +36,7 @@ from .database import GitHubPush, SaltJob, SaltJobMinion, SaltMinionResult
 from .serialisers import serialise
 
 app = Flask(__name__)
+app.wsgi_app = ProxyFix(app.wsgi_app)
 logger = logging.getLogger("saltbot.http")
 
 if not hasattr(hmac, 'compare_digest'):
