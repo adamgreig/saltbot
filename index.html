@@ -112,9 +112,13 @@
             $scope.job = job
             $scope.job.minions = for minion in job.minions
               if minion.num_results > 0 and minion.no_errors
-                minion.indicator = 'success'
-                minion.state = "#{ minion.num_good } states successful,
-                                #{ minion.num_changed } changed"
+                if minion.num_changed == 0
+                  minion.indicator = 'success'
+                  minion.state = "#{ minion.num_good } states successful"
+                else
+                  minion.indicator = 'info'
+                  minion.state = "#{ minion.num_good } states successful,
+                                  #{ minion.num_changed } changed"
               else if not minion.no_errors
                 minion.indicator = 'danger'
                 minion.state = "#{ minion.num_good } states successful,
