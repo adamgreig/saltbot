@@ -21,7 +21,8 @@ _format_email = \
     %(message)s"""
 
 _format_string = \
-    "[%(asctime)s] %(levelname)s %(name)s: %(message)s"
+    "[%(asctime)s.%(msec)03.0fZ] %(levelname)s: %(name)s: %(message)s"
+_date_format_string = '%Y-%m-%dT%H:%M:%S'
 
 
 class ConfigParser:
@@ -178,14 +179,16 @@ class ConfigParser:
 
     def configure_stderr_logging(self, root, stderr_level):
         stderr_handler = logging.StreamHandler()
-        stderr_handler.setFormatter(logging.Formatter(_format_string))
+        stderr_handler.setFormatter(
+            logging.Formatter(_format_string, _date_format_string))
         stderr_handler.setLevel(stderr_level)
         root.addHandler(stderr_handler)
 
     def configure_file_logging(self, root, file_level):
         file_name = self.cfg['logs']['file']
         file_handler = logging.handlers.WatchedFileHandler(file_name)
-        file_handler.setFormatter(logging.Formatter(_format_string))
+        file_handler.setFormatter(
+            logging.Formatter(_format_string, _date_format_string))
         file_handler.setLevel(file_level)
         root.addHandler(file_handler)
 
@@ -219,7 +222,9 @@ class ConfigParser:
         syslog_handler = logging.handlers.SysLogHandler(
             address=addr, facility=facility, socktype=socktype)
         syslog_handler.setLevel(syslog_level)
-        syslog_handler.setFormatter(logging.Formatter(_format_string))
+        fmtstring = "saltbot[%(process)d]: " + _format_string
+        syslog_handler.setFormatter(
+            logging.Formatter(fmtstring, _date_format_string))
         root.addHandler(syslog_handler)
 
     def configure_sentry_logging(self, root, sentry_level):
