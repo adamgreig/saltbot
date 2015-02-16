@@ -21,7 +21,7 @@ _format_email = \
     %(message)s"""
 
 _format_string = \
-    "[%(asctime)s.%(msec)03.0fZ] %(levelname)s: %(name)s: %(message)s"
+    "[%(asctime)s.%(msecs)03.0fZ] %(levelname)s: %(name)s: %(message)s"
 _date_format_string = '%Y-%m-%dT%H:%M:%S'
 
 
