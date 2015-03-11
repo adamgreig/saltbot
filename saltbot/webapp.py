@@ -251,6 +251,13 @@ def run(config, webpq):
     logger.info("App starting up")
     app.config.update(config)
     app.config['webpq'] = webpq
+    if 'handlers' in config['logs']:
+        for handler in config['logs']['handlers'].values():
+            if handler['class'] == "raven.handlers.logging.SentryHandler":
+                logger.info("Enabling Sentry reporting of Flask errors")
+                from raven.contrib.flask import Sentry
+                global sentry
+                sentry = Sentry(app, dsn=handler['dsn'])
     server = HTTPServer(WSGIContainer(app), xheaders=True)
     if config['web'].get('socket'):
         mode = int(str(config['web'].get('mode', 777)), 8)
